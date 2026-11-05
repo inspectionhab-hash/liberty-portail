@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<style>
+  :root { --a: #1f5f8b; --encre: #18212b; --gris: #66727f; --trait: #e2e6ea; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f5f6f8; color: var(--encre); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .haut { background: var(--a); color: #fff; padding: 16px 18px; } .haut h1 { margin: 0; font-size: 19px; } .haut .s { font-size: 13px; opacity: .85; }
+  main { max-width: 560px; margin: 0 auto; padding: 12px; }
+  .carte { background: #fff; border: 1px solid var(--trait); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  label { display: block; font-size: 13.5px; color: var(--gris); margin: 9px 0 3px; }
+  input, select { width: 100%; font: inherit; padding: 11px; border: 1px solid #cfd6dd; border-radius: 9px; background: #fff; }
+  .deux { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+  button, .btn { font: inherit; border: 0; border-radius: 11px; padding: 13px 16px; background: var(--a); color: #fff; font-weight: 600; width: 100%; margin-top: 10px; text-decoration: none; display: block; text-align: center; }
+  .sec { background: #eef1f4; color: var(--encre); }
+  .muted { color: var(--gris); font-size: 14px; }
+  .lien { word-break: break-all; font-size: 13px; background: #f3f5f7; padding: 8px; border-radius: 8px; margin-top: 8px; }
+  .rdv { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--trait); }
+  .rdv:first-child { border-top: 0; } .rdv .btn { width: auto; margin: 0; padding: 9px 12px; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="haut"><h1>Nouvelle demande</h1><div class="s" id="ent">Liberty</div></div>
+<main>
+  <div class="carte" id="form">
+    <div class="muted">Le client remplit lui-même sa fiche et la reçoit dans son portail. Remplis seulement ce qui est entendu.</div>
+    <div class="deux"><div><label>Téléphone du client</label><input id="tel" type="tel" inputmode="tel"></div>
+      <div><label>Courriel du client</label><input id="cou" type="email" inputmode="email"></div></div>
+    <label>Nom (si tu l'as)</label><input id="nom">
+    <div class="deux"><div><label>Type d'inspection</label><select id="type"></select></div>
+      <div><label>Langue</label><select id="langue"><option value="fr">Français</option><option value="en">Anglais</option></select></div></div>
+    <div class="deux"><div><label>Date entendue</label><input id="date" type="date"></div><div><label>Heure</label><input id="heure" type="time" step="900"></div></div>
+    <label>Prix entendu avant taxes ($)</label><input id="prix" type="number" inputmode="decimal" step="5">
+    <button id="creer" onclick="creer()">Créer le lien</button>
+  </div>
+  <div class="carte" id="res" style="display:none"></div>
+  <div class="carte" id="auj" style="display:none"></div>
+</main>
+<script>
+(function(){
+ const API = 'https://script.google.com/macros/s/AKfycbwSj2ZHUj-0uZojCbJWfeuMCWP-m5tq-2kmzI7VDasiS8HcnjTKfR-pwMxdVXWA2AY/exec';
+ function b(s,f){return new Proxy({}, {get(_,k){
+  if(k==='withSuccessHandler')return h=>b(h,f); if(k==='withFailureHandler')return h=>b(s,h);
+  return (...args)=>fetch(API,{method:'POST',credentials:'omit',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:k,args})})
+   .then(r=>r.json()).then(j=>{ if(j.erreur){ f&&f(new Error(j.erreur)); } else { s&&s(j.resultat); } }).catch(e=>f&&f(e)); }});}
+ window.google={script:{run:b(null,null),url:{getLocation:cb=>cb({parameter:Object.fromEntries(new URLSearchParams(location.search))})}}};
+})();
+</script>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let K = '', CFG = {};
+const run = (fn, ...a) => new Promise((ok, ko) => google.script.run.withSuccessHandler(ok).withFailureHandler(ko)[fn](...a));
+
+google.script.url.getLocation(async (loc) => {
+  K = (loc.parameter || {}).k || '';
+  try { CFG = await run('telConfig', K); } catch (e) { document.body.innerHTML = '<p style="padding:30px">Accès refusé.</p>'; return; }
+  $('#ent').textContent = CFG.entreprise || 'Liberty';
+  document.documentElement.style.setProperty('--a', CFG.couleur || '#1f5f8b');
+  $('#type').innerHTML = (CFG.types || ['Inspection préachat', 'Inspection prévente']).map((t) => `<option>${esc(t)}</option>`).join('');
+  aujourdhui();
+});
+
+async function creer() {
+  const d = { telephone: $('#tel').value.trim(), courriel: $('#cou').value.trim(), nom: $('#nom').value.trim(), type: $('#type').value,
+    langue: $('#langue').value, date: $('#date').value, heure: $('#heure').value, prix: $('#prix').value };
+  if (!d.telephone && !d.courriel) { alert('Entre au moins le téléphone ou le courriel du client.'); return; }
+  const b = $('#creer'); b.disabled = true; b.textContent = 'Création…';
+  try {
+    const r = await run('telCreer', K, d);
+    const tel = d.telephone.replace(/[^0-9+]/g, '');
+    $('#res').style.display = 'block';
+    $('#res').innerHTML = `<b>Lien prêt ✓</b><div class="muted">Le dossier s'ouvrira dans Liberty dès que le client aura rempli sa fiche.</div>
+      ${tel ? `<a class="btn" href="sms:${esc(tel)}?body=${encodeURIComponent(r.texto)}">📱 Envoyer par texto</a>` : ''}
+      ${d.courriel ? `<button id="bc" onclick="courriel('${esc(r.jeton)}')">✉ Envoyer par courriel</button>` : ''}
+      <button class="sec" onclick="navigator.clipboard.writeText('${esc(r.lien)}').then(()=>alert('Lien copié'))">Copier le lien</button>
+      <div class="lien">${esc(r.lien)}</div>
+      <button class="sec" onclick="location.reload()">Nouvelle demande</button>`;
+    $('#form').style.display = 'none';
+  } catch (e) { alert('Impossible : ' + e.message); }
+  b.disabled = false; b.textContent = 'Créer le lien';
+}
+
+async function courriel(jeton) {
+  const b = $('#bc'); b.disabled = true; b.textContent = 'Envoi…';
+  try { await run('telCourriel', K, jeton); b.textContent = '✓ Courriel envoyé'; } catch (e) { alert('Envoi impossible : ' + e.message); b.disabled = false; b.textContent = '✉ Envoyer par courriel'; }
+}
+
+function aujourdhui() {
+  const L = CFG.aujourdhui || [];
+  if (!L.length) return;
+  $('#auj').style.display = 'block';
+  $('#auj').innerHTML = '<b>Aujourd\'hui</b>' + L.map((r) => `<div class="rdv"><div>${esc(r.heure || '')} · ${esc(r.client || '')}<div class="muted">${esc(r.adresse || '')}</div></div>
+    ${r.lien_attestation ? `<a class="btn" href="${esc(r.lien_attestation)}">Attestation</a>` : `<span class="muted">${r.attestation_signee ? '✓ signée' : ''}</span>`}</div>`).join('');
+}
+</script>
+</body>
+</html>

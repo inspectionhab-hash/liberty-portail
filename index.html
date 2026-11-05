@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --a: #1f5f8b; --encre: #18212b; --gris: #66727f; --trait: #e2e6ea; --fond: #f5f6f8; --ok: #1e8a5e; --att: #e08a1e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fond); color: var(--encre); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .haut { background: var(--a); color: #fff; padding: 18px 18px 22px; }
+  .haut h1 { margin: 0; font-size: 20px; } .haut .s { opacity: .85; font-size: 14px; margin-top: 2px; }
+  main { max-width: 760px; margin: -12px auto 40px; padding: 0 12px; }
+  .carte { background: #fff; border: 1px solid var(--trait); border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(16,24,40,.06); }
+  .etape { display: flex; gap: 12px; align-items: center; }
+  .etape .n { width: 32px; height: 32px; border-radius: 50%; background: #eef1f4; display: grid; place-items: center; font-weight: 700; flex: none; color: var(--gris); }
+  .etape.fait .n { background: var(--ok); color: #fff; } .etape.afaire .n { background: var(--a); color: #fff; }
+  .etape .t { flex: 1; } .etape .t b { display: block; } .etape .t span { font-size: 13.5px; color: var(--gris); }
+  button, .btn { font: inherit; border: 0; border-radius: 10px; padding: 11px 16px; background: var(--a); color: #fff; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; }
+  button.sec { background: #eef1f4; color: var(--encre); } button:disabled { opacity: .45; }
+  label { display: block; font-size: 13.5px; color: var(--gris); margin: 10px 0 3px; }
+  input, select, textarea { width: 100%; font: inherit; padding: 10px 11px; border: 1px solid #cfd6dd; border-radius: 9px; background: #fff; }
+  .deux { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; } @media (max-width: 520px) { .deux { grid-template-columns: 1fr; } }
+  h2 { font-size: 17px; margin: 4px 0 6px; } h3 { font-size: 15px; margin: 18px 0 2px; }
+  .muted { color: var(--gris); font-size: 14px; } .ok { color: var(--ok); font-weight: 600; }
+  .case-a-cocher { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; font-size: 15px; color: var(--encre); }
+  .case-a-cocher input { width: 22px; height: 22px; flex: none; margin-top: 2px; }
+  /* lecture et signature */
+  #lecteur { position: fixed; inset: 0; background: #e9ecef; overflow-y: auto; z-index: 10; display: none; }
+  #lecteur .entete { position: sticky; top: 0; background: #fff; border-bottom: 1px solid var(--trait); padding: 10px 14px; display: flex; gap: 10px; align-items: center; z-index: 3; }
+  #lecteur .entete b { flex: 1; font-size: 15px; }
+  .page { position: relative; max-width: 900px; margin: 12px auto; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  .page img { width: 100%; display: block; }
+  .page .charge { padding: 120px 0; text-align: center; color: var(--gris); }
+  .zone { position: absolute; border: 2px solid var(--att); background: rgba(255, 196, 0, .28); border-radius: 4px; cursor: pointer; display: grid; place-items: center; animation: pulse 1.4s infinite; }
+  .zone::after { content: attr(data-quoi); position: absolute; top: 100%; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 11px; font-weight: 700; color: #9a5b00; background: #fff4df; padding: 1px 6px; border-radius: 6px; margin-top: 2px; }
+  .zone.faite { animation: none; border-color: transparent; background: transparent; }
+  .zone.faite::after { content: none; }
+  .zone img { max-width: 100%; max-height: 100%; }
+  .zone.courante { outline: 3px solid var(--a); outline-offset: 2px; }
+  @keyframes pulse { 50% { background: rgba(255, 196, 0, .55); } }
+  #barre { position: sticky; bottom: 0; background: #fff; border-top: 1px solid var(--trait); padding: 10px 14px; display: flex; gap: 10px; align-items: center; z-index: 3; }
+  #barre .p { flex: 1; font-size: 14px; }
+  /* tablette à dessin */
+  #pad { position: fixed; inset: 0; background: rgba(15,22,30,.55); display: none; align-items: center; justify-content: center; z-index: 20; padding: 12px; }
+  #pad .boite { background: #fff; border-radius: 14px; padding: 14px; width: 100%; max-width: 560px; }
+  #pad canvas { width: 100%; height: 200px; border: 2px dashed #cfd6dd; border-radius: 10px; touch-action: none; background: #fff; display: block; }
+  #pad .act { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+  .fichiers li { font-size: 14px; }
+  .attente { text-align: center; padding: 60px 20px; color: var(--gris); }
+</style>
+</head>
+<body>
+<div class="haut"><h1 id="titre">Votre inspection</h1><div class="s" id="sous"></div></div>
+<main id="m"><div class="attente">Chargement…</div></main>
+
+<div id="lecteur">
+  <div class="entete"><b id="l-titre"></b><button class="sec" onclick="fermerLecteur()">Fermer</button></div>
+  <div id="pages"></div>
+  <div id="barre"><div class="p" id="l-prog"></div><button class="sec" id="l-suiv" onclick="allerSuivante()">Case suivante ↓</button><button id="l-fin" onclick="terminer()" disabled>Terminer</button></div>
+</div>
+
+<div id="pad"><div class="boite">
+  <b id="pad-titre">Dessinez vos initiales</b><div class="muted" id="pad-aide">Avec le doigt ou la souris.</div>
+  <canvas id="toile"></canvas>
+  <div class="act"><button class="sec" onclick="effacerPad()">Effacer</button><button class="sec" onclick="fermerPad()">Annuler</button><button onclick="validerPad()">Apposer</button></div>
+</div></div>
+
+<script>
+(function(){
+ const API = 'https://script.google.com/macros/s/AKfycbwSj2ZHUj-0uZojCbJWfeuMCWP-m5tq-2kmzI7VDasiS8HcnjTKfR-pwMxdVXWA2AY/exec';
+ function b(s,f){return new Proxy({}, {get(_,k){
+  if(k==='withSuccessHandler')return h=>b(h,f); if(k==='withFailureHandler')return h=>b(s,h);
+  return (...args)=>fetch(API,{method:'POST',credentials:'omit',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:k,args})})
+   .then(r=>r.json()).then(j=>{ if(j.erreur){ f&&f(new Error(j.erreur)); } else { s&&s(j.resultat); } }).catch(e=>f&&f(e)); }});}
+ window.google={script:{run:b(null,null),url:{getLocation:cb=>cb({parameter:Object.fromEntries(new URLSearchParams(location.search))})}}};
+})();
+</script>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let J = null, P = null, PARAM = {};
+const appareil = navigator.userAgent;
+
+function run(fn, ...args) {
+  return new Promise((ok, ko) => google.script.run.withSuccessHandler(ok).withFailureHandler(ko)[fn](...args));
+}
+
+google.script.url.getLocation((loc) => {
+  PARAM = loc.parameter || {};
+  J = PARAM.j;
+  charger(true);
+});
+
+async function charger(premiere) {
+  try { P = await run('clientLire', J); } catch (e) { $('#m').innerHTML = `<div class="carte">Impossible d'ouvrir votre dossier : ${esc(e.message)}</div>`; return; }
+  if (!P) { $('#m').innerHTML = '<div class="carte">Ce lien n\'est plus valide. Communiquez avec votre inspecteur.</div>'; return; }
+  if (premiere) run('clientVu', J).catch(() => {});
+  document.documentElement.style.setProperty('--a', P.couleur || '#1f5f8b');
+  $('#titre').textContent = P.entreprise || 'Votre inspection';
+  const d = P.dossier || {};
+  $('#sous').textContent = [d.adresse, d.date ? dateLongue(d.date) + (d.heure ? ' à ' + heureTxt(d.heure) : '') : ''].filter(Boolean).join(' · ');
+  dessiner();
+  // lien direct vers un document (ex. attestation signée sur place)
+  if (premiere && PARAM.doc) { const e = (P.etapes || []).find((x) => x.cle === PARAM.doc || x.doc_id === PARAM.doc); if (e && e.doc_id && e.etat !== 'signe') ouvrirLecteur(e); }
+}
+
+function heureTxt(h) { if (!h) return ''; const [a, b] = h.split(':'); return Number(a) + ' h' + (b && b !== '00' ? ' ' + b : ''); }
+function dateLongue(s) {
+  const [y, m, j] = s.split('-').map(Number);
+  return new Date(y, m - 1, j).toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function dessiner() {
+  const E = P.etapes || [];
+  let h = `<div class="carte"><h2>Bonjour${P.client && P.client.nom ? ' ' + esc(P.client.nom.split(' ')[0]) : ''},</h2>
+    <div class="muted">Voici les étapes de votre dossier d'inspection. Tout se fait ici, sur votre téléphone ou votre ordinateur.</div></div>`;
+  E.forEach((e, i) => {
+    const fait = ['recu', 'signe', 'fait'].includes(e.etat);
+    h += `<div class="carte"><div class="etape ${fait ? 'fait' : 'afaire'}"><div class="n">${fait ? '✓' : i + 1}</div>
+      <div class="t"><b>${esc(e.titre)}</b><span>${esc(e.sous || (fait ? (e.etat === 'signe' ? 'Signé, merci !' : 'Reçu, merci !') : ''))}</span></div>
+      ${!fait && e.cle === 'fiche' ? '<button onclick="ouvrirFiche()">Remplir</button>' : ''}
+      ${!fait && e.doc_id ? `<button onclick='ouvrirLecteur(${JSON.stringify(e)})'>Lire et signer</button>` : ''}
+      ${e.cle === 'documents' ? '<button onclick="ouvrirDepot()">Déposer</button>' : ''}
+      ${e.lien ? `<a class="btn" href="${esc(e.lien)}" target="_blank">Ouvrir</a>` : ''}
+    </div><div id="z-${esc(e.cle)}"></div></div>`;
+  });
+  $('#m').innerHTML = h;
+  if (E.find((e) => e.cle === 'fiche' && e.etat === 'a_faire') && E.length === 1) ouvrirFiche();
+}
+
+// ---------------- fiche ----------------
+function ouvrirFiche() {
+  const c = P.client || {}, d = P.dossier || {}, f = P.fiche_recue || {};
+  const v = (k, def = '') => esc(f[k] ?? def);
+  const z = $('#z-fiche');
+  z.innerHTML = `<form id="fiche" onsubmit="envoyerFiche(event)">
+    <h3>Vous</h3>
+    <label>Nom complet *</label><input name="nom" required value="${v('nom', c.nom)}">
+    <div class="deux"><div><label>Téléphone *</label><input name="telephone" type="tel" required value="${v('telephone', c.telephone)}"></div>
+      <div><label>Courriel *</label><input name="courriel" type="email" required value="${v('courriel', c.courriel)}"></div></div>
+    <label>Votre adresse actuelle (pour la facture)</label><input name="adresse_client" value="${v('adresse_client')}">
+    <div class="deux"><div><label>Ville</label><input name="ville_client" value="${v('ville_client')}"></div><div><label>Code postal</label><input name="cp_client" value="${v('cp_client')}"></div></div>
+    <h3>Un deuxième acheteur ? (facultatif)</h3>
+    <div class="deux"><div><label>Nom</label><input name="co_nom" value="${v('co_nom')}"></div><div><label>Courriel</label><input name="co_courriel" type="email" value="${v('co_courriel')}"></div></div>
+    <h3>L'immeuble à inspecter</h3>
+    <label>Adresse *</label><input name="adresse" required value="${v('adresse', d.adresse)}">
+    <div class="deux"><div><label>Ville *</label><input name="ville" required value="${v('ville', d.ville)}"></div><div><label>Code postal</label><input name="cp" value="${v('cp')}"></div></div>
+    <div class="deux"><div><label>Type d'immeuble</label><select name="immeuble">${['Unifamiliale', 'Duplex', 'Triplex', 'Multilogement', 'Condominium (copropriété)', 'Chalet', 'Autre'].map((x) => `<option ${f.immeuble === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+      <div><label>Année de construction (si connue)</label><input name="annee" value="${v('annee')}"></div></div>
+    <div class="deux"><div><label>L'immeuble est</label><select name="occupation">${['Occupé', 'Vacant'].map((x) => `<option ${f.occupation === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+      <div><label>Code de boîte à clé (si vacant)</label><input name="boite_cle" value="${v('boite_cle')}"></div></div>
+    <h3>Votre courtier (facultatif)</h3>
+    <div class="deux"><div><label>Nom</label><input name="courtier_nom" value="${v('courtier_nom')}"></div><div><label>Téléphone ou courriel</label><input name="courtier_contact" value="${v('courtier_contact')}"></div></div>
+    <h3>Le rendez-vous</h3>
+    ${d.date ? `<div class="muted">Entendu : <b>${esc(dateLongue(d.date))}${d.heure ? ' à ' + esc(heureTxt(d.heure)) : ''}</b></div>` :
+      `<div class="deux"><div><label>Date souhaitée</label><input name="date_souhaitee" type="date" value="${v('date_souhaitee')}"></div><div><label>Moment</label><select name="moment"><option>Matin</option><option>Après-midi</option><option>Peu importe</option></select></div></div>`}
+    ${d.prix ? `<label class="case-a-cocher"><input type="checkbox" name="prix_ok" required> Je confirme le prix entendu de ${esc(d.prix)} $ plus taxes.</label>` : ''}
+    <label>Une précision pour l'inspecteur ?</label><textarea name="notes" rows="3">${v('notes')}</textarea>
+    <div style="margin-top:14px"><button type="submit" id="b-fiche">Envoyer mes informations</button></div>
+  </form>`;
+  z.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function envoyerFiche(ev) {
+  ev.preventDefault();
+  const b = $('#b-fiche'); b.disabled = true; b.textContent = 'Envoi…';
+  const d = {};
+  new FormData($('#fiche')).forEach((v, k) => { d[k] = v; });
+  try { P = await run('clientDeposer', J, 'fiche', d, appareil); dessiner(); window.scrollTo(0, 0); }
+  catch (e) { b.disabled = false; b.textContent = 'Envoyer mes informations'; alert('Envoi impossible : ' + e.message); }
+}
+
+// ---------------- dépôt de documents ----------------
+function ouvrirDepot() {
+  $('#z-documents').innerHTML = `<div style="margin-top:12px"><div class="muted">Déclaration du vendeur, fiche descriptive, factures de travaux… (photo ou PDF, 20 Mo au plus).</div>
+    <input type="file" id="f" multiple accept="image/*,application/pdf" style="margin-top:8px"><div id="f-et" class="muted"></div>
+    <ul class="fichiers">${(P.fichiers || []).map((f) => `<li>✓ ${esc(f.nom)}</li>`).join('')}</ul></div>`;
+  $('#f').onchange = async (e) => {
+    for (const fi of e.target.files) {
+      if (fi.size > 20e6) { alert(fi.name + ' est trop gros (20 Mo au plus).'); continue; }
+      $('#f-et').textContent = 'Envoi de ' + fi.name + '…';
+      const b64 = await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result.split(',')[1]); r.readAsDataURL(fi); });
+      try { P.fichiers = await run('clientFichier', J, fi.name, fi.type || 'application/octet-stream', b64); } catch (er) { alert('Envoi impossible : ' + er.message); }
+    }
+    $('#f-et').textContent = 'Merci, c\'est reçu.';
+    ouvrirDepot();
+  };
+}
+
+// ---------------- lecture et signature, case par case ----------------
+let DOC = null, MARQUES = {}, IMG = { initiales: null, signature: null }, CASE_EN_COURS = null;
+
+function casesAMoi() { return (DOC.cases || []).filter((c) => c.signataire === (P.signataire || 1)); }
+const cle = (c) => c.champ + '|' + c.page;
+
+async function ouvrirLecteur(e) {
+  DOC = { ...(P.docs || {})[e.doc_id], doc_id: e.doc_id, titre: e.titre };
+  MARQUES = {};
+  $('#l-titre').textContent = e.titre;
+  $('#lecteur').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  const z = $('#pages');
+  z.innerHTML = '';
+  for (let n = 0; n < DOC.pages; n++) {
+    const p = document.createElement('div');
+    p.className = 'page'; p.id = 'p' + n;
+    p.innerHTML = '<div class="charge">Chargement de la page ' + (n + 1) + '…</div>';
+    z.appendChild(p);
+  }
+  majBarre();
+  for (let n = 0; n < DOC.pages; n++) {
+    const b64 = await run('clientPage', J, e.doc_id, n);
+    const p = $('#p' + n);
+    p.innerHTML = `<img src="data:image/jpeg;base64,${b64}" alt="Page ${n + 1}">`;
+    casesAMoi().filter((c) => c.page === n).forEach((c) => {
+      const z2 = document.createElement('div');
+      z2.className = 'zone'; z2.dataset.k = cle(c);
+      z2.dataset.quoi = c.genre === 'signature' ? 'Signer ici' : 'Initiales ici';
+      Object.assign(z2.style, { left: (c.rect[0] / c.w * 100) + '%', top: (c.rect[1] / c.h * 100) + '%',
+        width: ((c.rect[2] - c.rect[0]) / c.w * 100) + '%', height: ((c.rect[3] - c.rect[1]) / c.h * 100) + '%' });
+      z2.onclick = () => toucher(c);
+      p.appendChild(z2);
+    });
+  }
+  majBarre();
+}
+
+function fermerLecteur() {
+  if (Object.keys(MARQUES).length && !confirm('Quitter sans terminer ? Vos initiales déjà apposées seront perdues.')) return;
+  $('#lecteur').style.display = 'none'; document.body.style.overflow = '';
+}
+
+function prochaine() { return casesAMoi().find((c) => !MARQUES[cle(c)]); }
+
+function majBarre() {
+  const C = casesAMoi(), faites = C.filter((c) => MARQUES[cle(c)]).length;
+  const s = prochaine();
+  document.querySelectorAll('.zone.courante').forEach((x) => x.classList.remove('courante'));
+  if (s) { const z = document.querySelector(`.zone[data-k="${CSS.escape(cle(s))}"]`); if (z) z.classList.add('courante'); }
+  $('#l-prog').innerHTML = s ? `Case ${faites + 1} de ${C.length} : <b>${esc(s.libelle)}</b> (page ${s.page + 1})` : `<span class="ok">Toutes les cases sont faites.</span>`;
+  $('#l-fin').disabled = !!s;
+  $('#l-suiv').style.display = s ? '' : 'none';
+}
+
+function allerSuivante() {
+  const s = prochaine();
+  const z = s && document.querySelector(`.zone[data-k="${CSS.escape(cle(s))}"]`);
+  if (z) z.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function toucher(c) {
+  const k = cle(c);
+  if (MARQUES[k]) {  // retoucher une case faite : on l'enlève
+    if (!confirm('Retirer cette marque ?')) return;
+    delete MARQUES[k];
+    const z = document.querySelector(`.zone[data-k="${CSS.escape(k)}"]`); z.classList.remove('faite'); z.innerHTML = '';
+    majBarre(); return;
+  }
+  CASE_EN_COURS = c;
+  if (IMG[c.genre] && !DOC.redessiner) { apposer(c, IMG[c.genre]); return; }
+  ouvrirPad(c.genre);
+}
+
+function apposer(c, image) {
+  MARQUES[cle(c)] = { champ: c.champ, page: c.page, image, quand: new Date().toISOString() };
+  const z = document.querySelector(`.zone[data-k="${CSS.escape(cle(c))}"]`);
+  z.classList.add('faite'); z.innerHTML = `<img src="${image}" alt="">`;
+  majBarre();
+  setTimeout(allerSuivante, 350);
+}
+
+async function terminer() {
+  const b = $('#l-fin'); b.disabled = true; b.textContent = 'Envoi…';
+  try {
+    P = await run('clientDeposer', J, 'signature', { doc_id: DOC.doc_id, signataire: P.signataire || 1, nom: (P.client || {}).nom || '', marques: Object.values(MARQUES) }, appareil);
+    MARQUES = {};
+    $('#lecteur').style.display = 'none'; document.body.style.overflow = '';
+    dessiner();
+    alert('Merci ! Votre document est signé. Une copie vous sera envoyée.');
+  } catch (e) { alert('Envoi impossible : ' + e.message); }
+  b.textContent = 'Terminer'; majBarre();
+}
+
+// ---------------- tablette à dessin ----------------
+let ctx = null, trace = false, vide = true, genrePad = 'initiales';
+function ouvrirPad(genre) {
+  genrePad = genre;
+  $('#pad-titre').textContent = genre === 'signature' ? 'Dessinez votre signature' : 'Dessinez vos initiales';
+  $('#pad-aide').textContent = DOC.redessiner ? 'Avec le doigt ou la souris.' : 'Avec le doigt ou la souris. Ensuite, touchez chaque case pour l\'apposer vous-même.';
+  $('#pad').style.display = 'flex';
+  const cv = $('#toile'), r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  cv.width = r.width * dpr; cv.height = r.height * dpr;
+  ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  ctx.lineWidth = genre === 'signature' ? 2.6 : 3.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1b2a6b';
+  vide = true;
+}
+function pos(e) { const r = $('#toile').getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; return [t.clientX - r.left, t.clientY - r.top]; }
+const cv = $('#toile');
+cv.addEventListener('pointerdown', (e) => { trace = true; vide = false; const [x, y] = pos(e); ctx.beginPath(); ctx.moveTo(x, y); cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', (e) => { if (!trace) return; const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); });
+cv.addEventListener('pointerup', () => { trace = false; });
+function effacerPad() { const c = $('#toile'); ctx.clearRect(0, 0, c.width, c.height); vide = true; }
+function fermerPad() { $('#pad').style.display = 'none'; CASE_EN_COURS = null; }
+function validerPad() {
+  if (vide) { alert('Dessinez d\'abord.'); return; }
+  const src = $('#toile');
+  // recadrer sur le trait (image plus nette dans la case)
+  const w = src.width, h = src.height, d = src.getContext('2d').getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = 0, y1 = 0;
+  for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2) if (d[(y * w + x) * 4 + 3] > 10) { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
+  const m = 8, cw = Math.max(10, x1 - x0 + 2 * m), ch = Math.max(10, y1 - y0 + 2 * m);
+  const out = document.createElement('canvas'); out.width = cw; out.height = ch;
+  out.getContext('2d').drawImage(src, Math.max(0, x0 - m), Math.max(0, y0 - m), cw, ch, 0, 0, cw, ch);
+  const image = out.toDataURL('image/png');
+  IMG[genrePad] = image;
+  $('#pad').style.display = 'none';
+  if (CASE_EN_COURS) apposer(CASE_EN_COURS, image);
+}
+</script>
+</body>
+</html>
