@@ -20,6 +20,14 @@
   .lien { word-break: break-all; font-size: 13px; background: #f3f5f7; padding: 8px; border-radius: 8px; margin-top: 8px; }
   .rdv { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--trait); }
   .rdv:first-child { border-top: 0; } .rdv .btn { width: auto; margin: 0; padding: 9px 12px; font-size: 14px; }
+  .pz { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .pst { width: auto; margin: 0; border: 1px solid #cfd6dd; background: #fff; color: var(--encre); border-radius: 18px; padding: 8px 12px;
+    font-size: 15px; font-weight: 500; display: inline-flex; flex-direction: column; align-items: center; line-height: 1.15; min-width: 58px; }
+  .pst small { font-size: 11px; color: var(--gris); }
+  .pst.on { background: var(--a); border-color: var(--a); color: #fff; font-weight: 600; } .pst.on small { color: #fff; }
+  .pst.autre { border-style: dashed; color: var(--a); } .pst.autre.on { color: #fff; border-style: solid; }
+  .pa { display: inline-flex; gap: 6px; } .pa select, .pa input { width: auto; padding: 8px; }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
@@ -32,7 +40,8 @@
     <label>Nom (si tu l'as)</label><input id="nom">
     <div class="deux"><div><label>Type d'inspection</label><select id="type"></select></div>
       <div><label>Langue</label><select id="langue"><option value="fr">Français</option><option value="en">Anglais</option></select></div></div>
-    <div class="deux"><div><label>Date entendue</label><input id="date" type="date"></div><div><label>Heure</label><input id="heure" type="time" step="900"></div></div>
+    <label>Date entendue</label><input id="date" type="hidden"><div class="pz" id="pz-date"></div>
+    <label>Heure entendue</label><input id="heure" type="hidden"><div class="pz" id="pz-heure"></div>
     <label>Prix entendu avant taxes ($)</label><input id="prix" type="number" inputmode="decimal" step="5">
     <button id="creer" onclick="creer()">Créer le lien</button>
   </div>
@@ -61,6 +70,7 @@ google.script.url.getLocation(async (loc) => {
   $('#ent').textContent = CFG.entreprise || 'Liberty';
   document.documentElement.style.setProperty('--a', CFG.couleur || '#1f5f8b');
   $('#type').innerHTML = (CFG.types || ['Inspection préachat', 'Inspection prévente']).map((t) => `<option>${esc(t)}</option>`).join('');
+  pastilles();
   aujourdhui();
 });
 
@@ -87,6 +97,34 @@ async function creer() {
 async function courriel(jeton) {
   const b = $('#bc'); b.disabled = true; b.textContent = 'Envoi…';
   try { await run('telCourriel', K, jeton); b.textContent = '✓ Courriel envoyé'; } catch (e) { alert('Envoi impossible : ' + e.message); b.disabled = false; b.textContent = '✉ Envoyer par courriel'; }
+}
+
+// Date et heure d'un toucher (pastilles), « Autre… » pour le reste : minutes 00, 15, 30 ou 45 seulement
+const hmTxt = (t) => { const [h, m] = t.split(':'); return Number(h) + ' h' + (m !== '00' ? ' ' + m : ''); };
+function pastilles() {
+  const P = CFG.pastilles || { heures: ['09:00', '11:00', '13:00', '13:30'], jours: [] };
+  const D = () => {
+    const v = $('#date').value, connu = P.jours.some((j) => j.date === v);
+    $('#pz-date').innerHTML = P.jours.map((j) => `<button type="button" class="pst ${j.date === v ? 'on' : ''}" data-d="${j.date}">${esc(j.label)}${j.insp ? `<small>${j.insp} insp.</small>` : ''}</button>`).join('')
+      + `<button type="button" class="pst autre ${v && !connu ? 'on' : ''}" data-ad>${v && !connu ? esc(v) : 'Autre date…'}</button>`
+      + `<span class="pa" ${v && !connu ? '' : 'hidden'}><input type="date" id="cal" value="${esc(v)}"></span>`;
+  };
+  const H = () => {
+    const v = $('#heure').value, connu = P.heures.includes(v), [h0, m0] = (v || '13:30').split(':');
+    $('#pz-heure').innerHTML = P.heures.map((h) => `<button type="button" class="pst ${h === v ? 'on' : ''}" data-h="${h}">${hmTxt(h)}</button>`).join('')
+      + `<button type="button" class="pst autre ${v && !connu ? 'on' : ''}" data-ah>${v && !connu ? hmTxt(v) : 'Autre…'}</button>`
+      + `<span class="pa" ${v && !connu ? '' : 'hidden'}><select id="hh">${Array.from({ length: 13 }, (_, i) => i + 7).map((h) => `<option value="${String(h).padStart(2, '0')}" ${Number(h0) === h ? 'selected' : ''}>${h} h</option>`).join('')}</select>
+        <select id="mm">${['00', '15', '30', '45'].map((m) => `<option ${m0 === m ? 'selected' : ''}>${m}</option>`).join('')}</select></span>`;
+  };
+  $('#pz-date').onclick = (e) => { const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.d) $('#date').value = $('#date').value === b.dataset.d ? '' : b.dataset.d;
+    else { $('#pz-date .pa').hidden = false; return; } D(); };
+  $('#pz-date').onchange = (e) => { if (e.target.id === 'cal') { $('#date').value = e.target.value; D(); } };
+  $('#pz-heure').onclick = (e) => { const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.h) $('#heure').value = $('#heure').value === b.dataset.h ? '' : b.dataset.h;
+    else { $('#pz-heure .pa').hidden = false; $('#heure').value = $('#hh').value + ':' + $('#mm').value; } H(); };
+  $('#pz-heure').onchange = (e) => { if (e.target.id === 'hh' || e.target.id === 'mm') { $('#heure').value = $('#hh').value + ':' + $('#mm').value; H(); } };
+  D(); H();
 }
 
 function aujourdhui() {
