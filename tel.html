@@ -109,9 +109,10 @@ function pastilles() {
       + `<button type="button" class="pst autre ${v && !connu ? 'on' : ''}" data-ad>${v && !connu ? esc(v) : 'Autre date…'}</button>`
       + `<span class="pa" ${v && !connu ? '' : 'hidden'}><input type="date" id="cal" value="${esc(v)}"></span>`;
   };
+  let autreH = false;  // « Autre… » reste ouvert jusqu'à ce qu'on touche une pastille
   const H = () => {
-    const v = $('#heure').value, connu = P.heures.includes(v), [h0, m0] = (v || '13:30').split(':');
-    $('#pz-heure').innerHTML = P.heures.map((h) => `<button type="button" class="pst ${h === v ? 'on' : ''}" data-h="${h}">${hmTxt(h)}</button>`).join('')
+    const v = $('#heure').value, connu = P.heures.includes(v) && !autreH, [h0, m0] = (v || '08:00').split(':');
+    $('#pz-heure').innerHTML = P.heures.map((h) => `<button type="button" class="pst ${h === v && !autreH ? 'on' : ''}" data-h="${h}">${hmTxt(h)}</button>`).join('')
       + `<button type="button" class="pst autre ${v && !connu ? 'on' : ''}" data-ah>${v && !connu ? hmTxt(v) : 'Autre…'}</button>`
       + `<span class="pa" ${v && !connu ? '' : 'hidden'}><select id="hh">${Array.from({ length: 13 }, (_, i) => i + 7).map((h) => `<option value="${String(h).padStart(2, '0')}" ${Number(h0) === h ? 'selected' : ''}>${h} h</option>`).join('')}</select>
         <select id="mm">${['00', '15', '30', '45'].map((m) => `<option ${m0 === m ? 'selected' : ''}>${m}</option>`).join('')}</select></span>`;
@@ -121,9 +122,9 @@ function pastilles() {
     else { $('#pz-date .pa').hidden = false; return; } D(); };
   $('#pz-date').onchange = (e) => { if (e.target.id === 'cal') { $('#date').value = e.target.value; D(); } };
   $('#pz-heure').onclick = (e) => { const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.h) $('#heure').value = $('#heure').value === b.dataset.h ? '' : b.dataset.h;
-    else { $('#pz-heure .pa').hidden = false; $('#heure').value = $('#hh').value + ':' + $('#mm').value; } H(); };
-  $('#pz-heure').onchange = (e) => { if (e.target.id === 'hh' || e.target.id === 'mm') { $('#heure').value = $('#hh').value + ':' + $('#mm').value; H(); } };
+    if (b.dataset.h) { autreH = false; $('#heure').value = $('#heure').value === b.dataset.h ? '' : b.dataset.h; }
+    else { autreH = true; $('#pz-heure .pa').hidden = false; $('#heure').value = $('#hh').value + ':' + $('#mm').value; } H(); };
+  $('#pz-heure').onchange = (e) => { if (e.target.id === 'hh' || e.target.id === 'mm') { autreH = true; $('#heure').value = $('#hh').value + ':' + $('#mm').value; H(); } };
   D(); H();
 }
 
