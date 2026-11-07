@@ -113,7 +113,9 @@ const EN = {
   'Chargement de la page ': 'Loading page ', 'Signer ici': 'Sign here', 'Initiales ici': 'Initials here',
   'Quitter sans terminer ? Vos initiales déjà apposées seront perdues.': 'Leave without finishing? The initials you already placed will be lost.',
   'Case ': 'Box ', ' de ': ' of ', 'page ': 'page ', 'Toutes les cases sont faites.': 'All boxes are done.',
-  'Retirer cette marque ?': 'Remove this mark?', 'Merci ! Votre document est signé. Une copie vous sera envoyée.':
+  'Retirer cette marque ?': 'Remove this mark?',
+  'Vos informations': 'Your information', 'Lien expiré': 'This link has expired', 'Lien invalide ou expiré.': 'Invalid or expired link.',
+  'Pas de courriel pour ce client': 'No email address for this client', 'Accès refusé': 'Access denied', 'Merci ! Votre document est signé. Une copie vous sera envoyée.':
     'Thank you! Your document is signed. A copy will be sent to you.', 'Dessinez d\'abord.': 'Please draw first.',
 };
 const enAnglais = () => !!(P && P.langue === 'en');
@@ -140,7 +142,7 @@ google.script.url.getLocation((loc) => {
 });
 
 async function charger(premiere) {
-  try { P = await run('clientLire', J); } catch (e) { $('#m').innerHTML = `<div class="carte">${t("Impossible d'ouvrir votre dossier : ")}${esc(e.message)}</div>`; return; }
+  try { P = await run('clientLire', J); } catch (e) { $('#m').innerHTML = `<div class="carte">${t("Impossible d'ouvrir votre dossier : ")}${esc(t(e.message))}</div>`; return; }
   if (!P) { $('#m').innerHTML = `<div class="carte">${t("Ce lien n'est plus valide. Communiquez avec votre inspecteur.")}</div>`; return; }
   traduirePage();
   if (premiere) run('clientVu', J).catch(() => {});
@@ -170,7 +172,7 @@ function dessiner() {
   E.forEach((e, i) => {
     const fait = ['recu', 'signe', 'fait'].includes(e.etat);
     h += `<div class="carte"><div class="etape ${fait ? 'fait' : 'afaire'}"><div class="n">${fait ? '✓' : i + 1}</div>
-      <div class="t"><b>${esc(e.titre)}</b><span>${esc(e.sous || (fait ? (e.etat === 'signe' ? t('Signé, merci !') : t('Reçu, merci !')) : ''))}</span></div>
+      <div class="t"><b>${esc(t(e.titre))}</b><span>${esc(e.sous ? t(e.sous) : (fait ? (e.etat === 'signe' ? t('Signé, merci !') : t('Reçu, merci !')) : ''))}</span></div>
       ${!fait && e.cle === 'fiche' ? `<button onclick="ouvrirFiche()">${t('Remplir')}</button>` : ''}
       ${!fait && e.doc_id ? `<button onclick='ouvrirLecteur(${JSON.stringify(e)})'>${t('Lire et signer')}</button>` : ''}
       ${e.cle === 'documents' ? `<button onclick="ouvrirDepot()">${t('Déposer')}</button>` : ''}
@@ -220,7 +222,7 @@ async function envoyerFiche(ev) {
   const d = {};
   new FormData($('#fiche')).forEach((v, k) => { d[k] = v; });
   try { P = await run('clientDeposer', J, 'fiche', d, appareil); dessiner(); window.scrollTo(0, 0); }
-  catch (e) { b.disabled = false; b.textContent = t('Envoyer mes informations'); alert(t('Envoi impossible : ') + e.message); }
+  catch (e) { b.disabled = false; b.textContent = t('Envoyer mes informations'); alert(t('Envoi impossible : ') + t(e.message)); }
 }
 
 // ---------------- dépôt de documents ----------------
@@ -233,7 +235,7 @@ function ouvrirDepot() {
       if (fi.size > 20e6) { alert(fi.name + t(' est trop gros (20 Mo au plus).')); continue; }
       $('#f-et').textContent = t('Envoi de ') + fi.name + '…';
       const b64 = await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result.split(',')[1]); r.readAsDataURL(fi); });
-      try { P.fichiers = await run('clientFichier', J, fi.name, fi.type || 'application/octet-stream', b64); } catch (er) { alert(t('Envoi impossible : ') + er.message); }
+      try { P.fichiers = await run('clientFichier', J, fi.name, fi.type || 'application/octet-stream', b64); } catch (er) { alert(t('Envoi impossible : ') + t(er.message)); }
     }
     $('#f-et').textContent = t("Merci, c'est reçu.");
     ouvrirDepot();
@@ -330,7 +332,7 @@ async function terminer() {
     $('#lecteur').style.display = 'none'; document.body.style.overflow = '';
     dessiner();
     alert(t('Merci ! Votre document est signé. Une copie vous sera envoyée.'));
-  } catch (e) { alert(t('Envoi impossible : ') + e.message); }
+  } catch (e) { alert(t('Envoi impossible : ') + t(e.message)); }
   b.textContent = t('Terminer'); majBarre();
 }
 
