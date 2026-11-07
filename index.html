@@ -55,15 +55,15 @@
 <main id="m"><div class="attente">Chargement…</div></main>
 
 <div id="lecteur">
-  <div class="entete"><b id="l-titre"></b><button class="sec" onclick="fermerLecteur()">Fermer</button></div>
+  <div class="entete"><b id="l-titre"></b><button class="sec" onclick="fermerLecteur()" data-t="Fermer">Fermer</button></div>
   <div id="pages"></div>
-  <div id="barre"><div class="p" id="l-prog"></div><button class="sec" id="l-suiv" onclick="allerSuivante()">Case suivante ↓</button><button id="l-fin" onclick="terminer()" disabled>Terminer</button></div>
+  <div id="barre"><div class="p" id="l-prog"></div><button class="sec" id="l-suiv" onclick="allerSuivante()" data-t="Case suivante ↓">Case suivante ↓</button><button id="l-fin" onclick="terminer()" disabled data-t="Terminer">Terminer</button></div>
 </div>
 
 <div id="pad"><div class="boite">
   <b id="pad-titre">Dessinez vos initiales</b><div class="muted" id="pad-aide">Avec le doigt ou la souris.</div>
   <canvas id="toile"></canvas>
-  <div class="act"><button class="sec" onclick="effacerPad()">Effacer</button><button class="sec" onclick="fermerPad()">Annuler</button><button onclick="validerPad()">Apposer</button></div>
+  <div class="act"><button class="sec" onclick="effacerPad()" data-t="Effacer">Effacer</button><button class="sec" onclick="fermerPad()" data-t="Annuler">Annuler</button><button onclick="validerPad()" data-t="Apposer">Apposer</button></div>
 </div></div>
 
 <script>
@@ -80,6 +80,53 @@
 const $ = (s) => document.querySelector(s);
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 let J = null, P = null, PARAM = {};
+// ---------------- anglais : le client anglophone voit tout en anglais (la valeur envoyée reste la même) ----------------
+const EN = {
+  'Votre inspection': 'Your inspection', 'Chargement…': 'Loading…', 'Fermer': 'Close', 'Case suivante ↓': 'Next box ↓',
+  'Terminer': 'Finish', 'Dessinez vos initiales': 'Draw your initials', 'Dessinez votre signature': 'Draw your signature',
+  'Avec le doigt ou la souris.': 'With your finger or the mouse.',
+  'Avec le doigt ou la souris. Ensuite, touchez chaque case pour l\'apposer vous-même.': 'With your finger or the mouse. Then tap each box to place it yourself.',
+  'Effacer': 'Clear', 'Annuler': 'Cancel', 'Apposer': 'Place',
+  'Impossible d\'ouvrir votre dossier : ': 'Unable to open your file: ',
+  'Ce lien n\'est plus valide. Communiquez avec votre inspecteur.': 'This link is no longer valid. Please contact your inspector.',
+  'Bonjour': 'Hello', 'Voici les étapes de votre dossier d\'inspection. Tout se fait ici, sur votre téléphone ou votre ordinateur.':
+    'Here are the steps for your inspection file. Everything is done here, on your phone or computer.',
+  'Signé, merci !': 'Signed, thank you!', 'Reçu, merci !': 'Received, thank you!', 'Remplir': 'Fill in',
+  'Lire et signer': 'Read and sign', 'Déposer': 'Upload', 'Ouvrir': 'Open',
+  'Vous': 'You', 'Nom complet *': 'Full name *', 'Téléphone *': 'Phone *', 'Courriel *': 'Email *',
+  'Votre adresse actuelle (pour la facture)': 'Your current address (for the invoice)', 'Ville': 'City', 'Code postal': 'Postal code',
+  'Un deuxième acheteur ? (facultatif)': 'A second buyer? (optional)', 'Nom': 'Name', 'Courriel': 'Email',
+  'L\'immeuble à inspecter': 'The property to inspect', 'Adresse *': 'Address *', 'Ville *': 'City *',
+  'Type d\'immeuble': 'Type of property', 'Année de construction (si connue)': 'Year built (if known)',
+  'Unifamiliale': 'Single-family', 'Duplex': 'Duplex', 'Triplex': 'Triplex', 'Multilogement': 'Multi-unit',
+  'Condominium (copropriété)': 'Condominium', 'Chalet': 'Cottage', 'Autre': 'Other',
+  'L\'immeuble est': 'The property is', 'Occupé': 'Occupied', 'Vacant': 'Vacant',
+  'Code de boîte à clé (si vacant)': 'Lockbox code (if vacant)', 'Votre courtier (facultatif)': 'Your real estate broker (optional)',
+  'Téléphone ou courriel': 'Phone or email', 'Le rendez-vous': 'The appointment', 'Entendu : ': 'Agreed: ',
+  'Date souhaitée': 'Preferred date', 'Moment': 'Time of day', 'Matin': 'Morning', 'Après-midi': 'Afternoon', 'Peu importe': 'No preference',
+  'Je confirme le prix entendu de ': 'I confirm the agreed price of ', ' $ plus taxes.': ' $ plus taxes.',
+  'Une précision pour l\'inspecteur ?': 'Anything the inspector should know?', 'Envoyer mes informations': 'Send my information',
+  'Envoi…': 'Sending…', 'Envoi impossible : ': 'Unable to send: ',
+  'Déclaration du vendeur, fiche descriptive, factures de travaux… (photo ou PDF, 20 Mo au plus).':
+    'Seller\'s declaration, listing sheet, renovation invoices… (photo or PDF, 20 MB maximum).',
+  ' est trop gros (20 Mo au plus).': ' is too large (20 MB maximum).', 'Envoi de ': 'Sending ', 'Merci, c\'est reçu.': 'Thank you, it\'s received.',
+  'Chargement de la page ': 'Loading page ', 'Signer ici': 'Sign here', 'Initiales ici': 'Initials here',
+  'Quitter sans terminer ? Vos initiales déjà apposées seront perdues.': 'Leave without finishing? The initials you already placed will be lost.',
+  'Case ': 'Box ', ' de ': ' of ', 'page ': 'page ', 'Toutes les cases sont faites.': 'All boxes are done.',
+  'Retirer cette marque ?': 'Remove this mark?', 'Merci ! Votre document est signé. Une copie vous sera envoyée.':
+    'Thank you! Your document is signed. A copy will be sent to you.', 'Dessinez d\'abord.': 'Please draw first.',
+};
+const enAnglais = () => !!(P && P.langue === 'en');
+const t = (s) => (enAnglais() && EN[s] !== undefined ? EN[s] : s);
+// libellés des cases de la convention APCHQ
+const tCase = (s) => (!enAnglais() ? s : String(s).replace(/^Article/, 'Section').replace('Bas de la page', 'Bottom of page')
+  .replace(/^Annexe/, 'Schedule').replace('Attestation', 'Certificate'));
+function traduirePage() {
+  document.documentElement.lang = enAnglais() ? 'en' : 'fr';
+  document.querySelectorAll('[data-t]').forEach((x) => { x.textContent = t(x.dataset.t); });
+}
+
+
 const appareil = navigator.userAgent;
 
 function run(fn, ...args) {
@@ -93,36 +140,41 @@ google.script.url.getLocation((loc) => {
 });
 
 async function charger(premiere) {
-  try { P = await run('clientLire', J); } catch (e) { $('#m').innerHTML = `<div class="carte">Impossible d'ouvrir votre dossier : ${esc(e.message)}</div>`; return; }
-  if (!P) { $('#m').innerHTML = '<div class="carte">Ce lien n\'est plus valide. Communiquez avec votre inspecteur.</div>'; return; }
+  try { P = await run('clientLire', J); } catch (e) { $('#m').innerHTML = `<div class="carte">${t("Impossible d'ouvrir votre dossier : ")}${esc(e.message)}</div>`; return; }
+  if (!P) { $('#m').innerHTML = `<div class="carte">${t("Ce lien n'est plus valide. Communiquez avec votre inspecteur.")}</div>`; return; }
+  traduirePage();
   if (premiere) run('clientVu', J).catch(() => {});
   document.documentElement.style.setProperty('--a', P.couleur || '#1f5f8b');
-  $('#titre').textContent = P.entreprise || 'Votre inspection';
+  $('#titre').textContent = P.entreprise || t('Votre inspection');
   const d = P.dossier || {};
-  $('#sous').textContent = [d.adresse, d.date ? dateLongue(d.date) + (d.heure ? ' à ' + heureTxt(d.heure) : '') : ''].filter(Boolean).join(' · ');
+  $('#sous').textContent = [d.adresse, d.date ? dateLongue(d.date) + (d.heure ? (enAnglais() ? ' at ' : ' à ') + heureTxt(d.heure) : '') : ''].filter(Boolean).join(' · ');
   dessiner();
   // lien direct vers un document (ex. attestation signée sur place)
   if (premiere && PARAM.doc) { const e = (P.etapes || []).find((x) => x.cle === PARAM.doc || x.doc_id === PARAM.doc); if (e && e.doc_id && e.etat !== 'signe') ouvrirLecteur(e); }
 }
 
-function heureTxt(h) { if (!h) return ''; const [a, b] = h.split(':'); return Number(a) + ' h' + (b && b !== '00' ? ' ' + b : ''); }
+function heureTxt(h) {
+  if (!h) return ''; const [a, b] = h.split(':');
+  if (enAnglais()) { const n = Number(a); return ((n + 11) % 12 + 1) + ':' + (b || '00') + (n < 12 ? ' a.m.' : ' p.m.'); }
+  return Number(a) + ' h' + (b && b !== '00' ? ' ' + b : '');
+}
 function dateLongue(s) {
   const [y, m, j] = s.split('-').map(Number);
-  return new Date(y, m - 1, j).toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+  return new Date(y, m - 1, j).toLocaleDateString(enAnglais() ? 'en-CA' : 'fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
 function dessiner() {
   const E = P.etapes || [];
-  let h = `<div class="carte"><h2>Bonjour${P.client && P.client.nom ? ' ' + esc(P.client.nom.split(' ')[0]) : ''},</h2>
-    <div class="muted">Voici les étapes de votre dossier d'inspection. Tout se fait ici, sur votre téléphone ou votre ordinateur.</div></div>`;
+  let h = `<div class="carte"><h2>${t('Bonjour')}${P.client && P.client.nom ? ' ' + esc(P.client.nom.split(' ')[0]) : ''},</h2>
+    <div class="muted">${t("Voici les étapes de votre dossier d'inspection. Tout se fait ici, sur votre téléphone ou votre ordinateur.")}</div></div>`;
   E.forEach((e, i) => {
     const fait = ['recu', 'signe', 'fait'].includes(e.etat);
     h += `<div class="carte"><div class="etape ${fait ? 'fait' : 'afaire'}"><div class="n">${fait ? '✓' : i + 1}</div>
-      <div class="t"><b>${esc(e.titre)}</b><span>${esc(e.sous || (fait ? (e.etat === 'signe' ? 'Signé, merci !' : 'Reçu, merci !') : ''))}</span></div>
-      ${!fait && e.cle === 'fiche' ? '<button onclick="ouvrirFiche()">Remplir</button>' : ''}
-      ${!fait && e.doc_id ? `<button onclick='ouvrirLecteur(${JSON.stringify(e)})'>Lire et signer</button>` : ''}
-      ${e.cle === 'documents' ? '<button onclick="ouvrirDepot()">Déposer</button>' : ''}
-      ${e.lien ? `<a class="btn" href="${esc(e.lien)}" target="_blank">Ouvrir</a>` : ''}
+      <div class="t"><b>${esc(e.titre)}</b><span>${esc(e.sous || (fait ? (e.etat === 'signe' ? t('Signé, merci !') : t('Reçu, merci !')) : ''))}</span></div>
+      ${!fait && e.cle === 'fiche' ? `<button onclick="ouvrirFiche()">${t('Remplir')}</button>` : ''}
+      ${!fait && e.doc_id ? `<button onclick='ouvrirLecteur(${JSON.stringify(e)})'>${t('Lire et signer')}</button>` : ''}
+      ${e.cle === 'documents' ? `<button onclick="ouvrirDepot()">${t('Déposer')}</button>` : ''}
+      ${e.lien ? `<a class="btn" href="${esc(e.lien)}" target="_blank">${t('Ouvrir')}</a>` : ''}
     </div><div id="z-${esc(e.cle)}"></div></div>`;
   });
   $('#m').innerHTML = h;
@@ -135,55 +187,55 @@ function ouvrirFiche() {
   const v = (k, def = '') => esc(f[k] ?? def);
   const z = $('#z-fiche');
   z.innerHTML = `<form id="fiche" onsubmit="envoyerFiche(event)">
-    <h3>Vous</h3>
-    <label>Nom complet *</label><input name="nom" required value="${v('nom', c.nom)}">
-    <div class="deux"><div><label>Téléphone *</label><input name="telephone" type="tel" required value="${v('telephone', c.telephone)}"></div>
-      <div><label>Courriel *</label><input name="courriel" type="email" required value="${v('courriel', c.courriel)}"></div></div>
-    <label>Votre adresse actuelle (pour la facture)</label><input name="adresse_client" value="${v('adresse_client')}">
-    <div class="deux"><div><label>Ville</label><input name="ville_client" value="${v('ville_client')}"></div><div><label>Code postal</label><input name="cp_client" value="${v('cp_client')}"></div></div>
-    <h3>Un deuxième acheteur ? (facultatif)</h3>
-    <div class="deux"><div><label>Nom</label><input name="co_nom" value="${v('co_nom')}"></div><div><label>Courriel</label><input name="co_courriel" type="email" value="${v('co_courriel')}"></div></div>
-    <h3>L'immeuble à inspecter</h3>
-    <label>Adresse *</label><input name="adresse" required value="${v('adresse', d.adresse)}">
-    <div class="deux"><div><label>Ville *</label><input name="ville" required value="${v('ville', d.ville)}"></div><div><label>Code postal</label><input name="cp" value="${v('cp')}"></div></div>
-    <div class="deux"><div><label>Type d'immeuble</label><select name="immeuble">${['Unifamiliale', 'Duplex', 'Triplex', 'Multilogement', 'Condominium (copropriété)', 'Chalet', 'Autre'].map((x) => `<option ${f.immeuble === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
-      <div><label>Année de construction (si connue)</label><input name="annee" value="${v('annee')}"></div></div>
-    <div class="deux"><div><label>L'immeuble est</label><select name="occupation">${['Occupé', 'Vacant'].map((x) => `<option ${f.occupation === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
-      <div><label>Code de boîte à clé (si vacant)</label><input name="boite_cle" value="${v('boite_cle')}"></div></div>
-    <h3>Votre courtier (facultatif)</h3>
-    <div class="deux"><div><label>Nom</label><input name="courtier_nom" value="${v('courtier_nom')}"></div><div><label>Téléphone ou courriel</label><input name="courtier_contact" value="${v('courtier_contact')}"></div></div>
-    <h3>Le rendez-vous</h3>
-    ${d.date ? `<div class="muted">Entendu : <b>${esc(dateLongue(d.date))}${d.heure ? ' à ' + esc(heureTxt(d.heure)) : ''}</b></div>` :
-      `<div class="deux"><div><label>Date souhaitée</label><input name="date_souhaitee" type="date" value="${v('date_souhaitee')}"></div><div><label>Moment</label><select name="moment"><option>Matin</option><option>Après-midi</option><option>Peu importe</option></select></div></div>`}
-    ${d.prix ? `<label class="case-a-cocher"><input type="checkbox" name="prix_ok" required> Je confirme le prix entendu de ${esc(d.prix)} $ plus taxes.</label>` : ''}
-    <label>Une précision pour l'inspecteur ?</label><textarea name="notes" rows="3">${v('notes')}</textarea>
-    <div style="margin-top:14px"><button type="submit" id="b-fiche">Envoyer mes informations</button></div>
+    <h3>${t("Vous")}</h3>
+    <label>${t("Nom complet *")}</label><input name="nom" required value="${v('nom', c.nom)}">
+    <div class="deux"><div><label>${t("Téléphone *")}</label><input name="telephone" type="tel" required value="${v('telephone', c.telephone)}"></div>
+      <div><label>${t("Courriel *")}</label><input name="courriel" type="email" required value="${v('courriel', c.courriel)}"></div></div>
+    <label>${t("Votre adresse actuelle (pour la facture)")}</label><input name="adresse_client" value="${v('adresse_client')}">
+    <div class="deux"><div><label>${t("Ville")}</label><input name="ville_client" value="${v('ville_client')}"></div><div><label>${t("Code postal")}</label><input name="cp_client" value="${v('cp_client')}"></div></div>
+    <h3>${t("Un deuxième acheteur ? (facultatif)")}</h3>
+    <div class="deux"><div><label>${t("Nom")}</label><input name="co_nom" value="${v('co_nom')}"></div><div><label>${t("Courriel")}</label><input name="co_courriel" type="email" value="${v('co_courriel')}"></div></div>
+    <h3>${t("L'immeuble à inspecter")}</h3>
+    <label>${t("Adresse *")}</label><input name="adresse" required value="${v('adresse', d.adresse)}">
+    <div class="deux"><div><label>${t("Ville *")}</label><input name="ville" required value="${v('ville', d.ville)}"></div><div><label>${t("Code postal")}</label><input name="cp" value="${v('cp')}"></div></div>
+    <div class="deux"><div><label>${t("Type d'immeuble")}</label><select name="immeuble">${['Unifamiliale', 'Duplex', 'Triplex', 'Multilogement', 'Condominium (copropriété)', 'Chalet', 'Autre'].map((x) => `<option value="${x}" ${f.immeuble === x ? 'selected' : ''}>${t(x)}</option>`).join('')}</select></div>
+      <div><label>${t("Année de construction (si connue)")}</label><input name="annee" value="${v('annee')}"></div></div>
+    <div class="deux"><div><label>${t("L'immeuble est")}</label><select name="occupation">${['Occupé', 'Vacant'].map((x) => `<option value="${x}" ${f.occupation === x ? 'selected' : ''}>${t(x)}</option>`).join('')}</select></div>
+      <div><label>${t("Code de boîte à clé (si vacant)")}</label><input name="boite_cle" value="${v('boite_cle')}"></div></div>
+    <h3>${t("Votre courtier (facultatif)")}</h3>
+    <div class="deux"><div><label>${t("Nom")}</label><input name="courtier_nom" value="${v('courtier_nom')}"></div><div><label>${t("Téléphone ou courriel")}</label><input name="courtier_contact" value="${v('courtier_contact')}"></div></div>
+    <h3>${t("Le rendez-vous")}</h3>
+    ${d.date ? `<div class="muted">${t('Entendu : ')}<b>${esc(dateLongue(d.date))}${d.heure ? (enAnglais() ? ' at ' : ' à ') + esc(heureTxt(d.heure)) : ''}</b></div>` :
+      `<div class="deux"><div><label>${t("Date souhaitée")}</label><input name="date_souhaitee" type="date" value="${v('date_souhaitee')}"></div><div><label>${t("Moment")}</label><select name="moment">${['Matin', 'Après-midi', 'Peu importe'].map((x) => `<option value="${x}">${t(x)}</option>`).join('')}</select></div></div>`}
+    ${d.prix ? `<label class="case-a-cocher"><input type="checkbox" name="prix_ok" required> ${t('Je confirme le prix entendu de ')}${esc(d.prix)}${t(' $ plus taxes.')}</label>` : ''}
+    <label>${t("Une précision pour l'inspecteur ?")}</label><textarea name="notes" rows="3">${v('notes')}</textarea>
+    <div style="margin-top:14px"><button type="submit" id="b-fiche">${t('Envoyer mes informations')}</button></div>
   </form>`;
   z.scrollIntoView({ behavior: 'smooth' });
 }
 
 async function envoyerFiche(ev) {
   ev.preventDefault();
-  const b = $('#b-fiche'); b.disabled = true; b.textContent = 'Envoi…';
+  const b = $('#b-fiche'); b.disabled = true; b.textContent = t('Envoi…');
   const d = {};
   new FormData($('#fiche')).forEach((v, k) => { d[k] = v; });
   try { P = await run('clientDeposer', J, 'fiche', d, appareil); dessiner(); window.scrollTo(0, 0); }
-  catch (e) { b.disabled = false; b.textContent = 'Envoyer mes informations'; alert('Envoi impossible : ' + e.message); }
+  catch (e) { b.disabled = false; b.textContent = t('Envoyer mes informations'); alert(t('Envoi impossible : ') + e.message); }
 }
 
 // ---------------- dépôt de documents ----------------
 function ouvrirDepot() {
-  $('#z-documents').innerHTML = `<div style="margin-top:12px"><div class="muted">Déclaration du vendeur, fiche descriptive, factures de travaux… (photo ou PDF, 20 Mo au plus).</div>
+  $('#z-documents').innerHTML = `<div style="margin-top:12px"><div class="muted">${t('Déclaration du vendeur, fiche descriptive, factures de travaux… (photo ou PDF, 20 Mo au plus).')}</div>
     <input type="file" id="f" multiple accept="image/*,application/pdf" style="margin-top:8px"><div id="f-et" class="muted"></div>
     <ul class="fichiers">${(P.fichiers || []).map((f) => `<li>✓ ${esc(f.nom)}</li>`).join('')}</ul></div>`;
   $('#f').onchange = async (e) => {
     for (const fi of e.target.files) {
-      if (fi.size > 20e6) { alert(fi.name + ' est trop gros (20 Mo au plus).'); continue; }
-      $('#f-et').textContent = 'Envoi de ' + fi.name + '…';
+      if (fi.size > 20e6) { alert(fi.name + t(' est trop gros (20 Mo au plus).')); continue; }
+      $('#f-et').textContent = t('Envoi de ') + fi.name + '…';
       const b64 = await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result.split(',')[1]); r.readAsDataURL(fi); });
-      try { P.fichiers = await run('clientFichier', J, fi.name, fi.type || 'application/octet-stream', b64); } catch (er) { alert('Envoi impossible : ' + er.message); }
+      try { P.fichiers = await run('clientFichier', J, fi.name, fi.type || 'application/octet-stream', b64); } catch (er) { alert(t('Envoi impossible : ') + er.message); }
     }
-    $('#f-et').textContent = 'Merci, c\'est reçu.';
+    $('#f-et').textContent = t("Merci, c'est reçu.");
     ouvrirDepot();
   };
 }
@@ -205,7 +257,7 @@ async function ouvrirLecteur(e) {
   for (let n = 0; n < DOC.pages; n++) {
     const p = document.createElement('div');
     p.className = 'page'; p.id = 'p' + n;
-    p.innerHTML = '<div class="charge">Chargement de la page ' + (n + 1) + '…</div>';
+    p.innerHTML = '<div class="charge">' + t('Chargement de la page ') + (n + 1) + '…</div>';
     z.appendChild(p);
   }
   majBarre();
@@ -216,7 +268,7 @@ async function ouvrirLecteur(e) {
     casesAMoi().filter((c) => c.page === n).forEach((c) => {
       const z2 = document.createElement('div');
       z2.className = 'zone'; z2.dataset.k = cle(c);
-      z2.dataset.quoi = c.genre === 'signature' ? 'Signer ici' : 'Initiales ici';
+      z2.dataset.quoi = c.genre === 'signature' ? t('Signer ici') : t('Initiales ici');
       Object.assign(z2.style, { left: (c.rect[0] / c.w * 100) + '%', top: (c.rect[1] / c.h * 100) + '%',
         width: ((c.rect[2] - c.rect[0]) / c.w * 100) + '%', height: ((c.rect[3] - c.rect[1]) / c.h * 100) + '%' });
       z2.onclick = () => toucher(c);
@@ -227,7 +279,7 @@ async function ouvrirLecteur(e) {
 }
 
 function fermerLecteur() {
-  if (Object.keys(MARQUES).length && !confirm('Quitter sans terminer ? Vos initiales déjà apposées seront perdues.')) return;
+  if (Object.keys(MARQUES).length && !confirm(t('Quitter sans terminer ? Vos initiales déjà apposées seront perdues.'))) return;
   $('#lecteur').style.display = 'none'; document.body.style.overflow = '';
 }
 
@@ -238,7 +290,7 @@ function majBarre() {
   const s = prochaine();
   document.querySelectorAll('.zone.courante').forEach((x) => x.classList.remove('courante'));
   if (s) { const z = document.querySelector(`.zone[data-k="${CSS.escape(cle(s))}"]`); if (z) z.classList.add('courante'); }
-  $('#l-prog').innerHTML = s ? `Case ${faites + 1} de ${C.length} : <b>${esc(s.libelle)}</b> (page ${s.page + 1})` : `<span class="ok">Toutes les cases sont faites.</span>`;
+  $('#l-prog').innerHTML = s ? `${t('Case ')}${faites + 1}${t(' de ')}${C.length} : <b>${esc(tCase(s.libelle))}</b> (page ${s.page + 1})` : `<span class="ok">${t('Toutes les cases sont faites.')}</span>`;
   $('#l-fin').disabled = !!s;
   $('#l-suiv').style.display = s ? '' : 'none';
 }
@@ -252,7 +304,7 @@ function allerSuivante() {
 function toucher(c) {
   const k = cle(c);
   if (MARQUES[k]) {  // retoucher une case faite : on l'enlève
-    if (!confirm('Retirer cette marque ?')) return;
+    if (!confirm(t('Retirer cette marque ?'))) return;
     delete MARQUES[k];
     const z = document.querySelector(`.zone[data-k="${CSS.escape(k)}"]`); z.classList.remove('faite'); z.innerHTML = '';
     majBarre(); return;
@@ -271,23 +323,23 @@ function apposer(c, image) {
 }
 
 async function terminer() {
-  const b = $('#l-fin'); b.disabled = true; b.textContent = 'Envoi…';
+  const b = $('#l-fin'); b.disabled = true; b.textContent = t('Envoi…');
   try {
     P = await run('clientDeposer', J, 'signature', { doc_id: DOC.doc_id, signataire: P.signataire || 1, nom: (P.client || {}).nom || '', marques: Object.values(MARQUES) }, appareil);
     MARQUES = {};
     $('#lecteur').style.display = 'none'; document.body.style.overflow = '';
     dessiner();
-    alert('Merci ! Votre document est signé. Une copie vous sera envoyée.');
-  } catch (e) { alert('Envoi impossible : ' + e.message); }
-  b.textContent = 'Terminer'; majBarre();
+    alert(t('Merci ! Votre document est signé. Une copie vous sera envoyée.'));
+  } catch (e) { alert(t('Envoi impossible : ') + e.message); }
+  b.textContent = t('Terminer'); majBarre();
 }
 
 // ---------------- tablette à dessin ----------------
 let ctx = null, trace = false, vide = true, genrePad = 'initiales';
 function ouvrirPad(genre) {
   genrePad = genre;
-  $('#pad-titre').textContent = genre === 'signature' ? 'Dessinez votre signature' : 'Dessinez vos initiales';
-  $('#pad-aide').textContent = DOC.redessiner ? 'Avec le doigt ou la souris.' : 'Avec le doigt ou la souris. Ensuite, touchez chaque case pour l\'apposer vous-même.';
+  $('#pad-titre').textContent = genre === 'signature' ? t('Dessinez votre signature') : t('Dessinez vos initiales');
+  $('#pad-aide').textContent = DOC.redessiner ? t('Avec le doigt ou la souris.') : t("Avec le doigt ou la souris. Ensuite, touchez chaque case pour l'apposer vous-même.");
   $('#pad').style.display = 'flex';
   const cv = $('#toile'), r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
   cv.width = r.width * dpr; cv.height = r.height * dpr;
@@ -303,7 +355,7 @@ cv.addEventListener('pointerup', () => { trace = false; });
 function effacerPad() { const c = $('#toile'); ctx.clearRect(0, 0, c.width, c.height); vide = true; }
 function fermerPad() { $('#pad').style.display = 'none'; CASE_EN_COURS = null; }
 function validerPad() {
-  if (vide) { alert('Dessinez d\'abord.'); return; }
+  if (vide) { alert(t("Dessinez d'abord.")); return; }
   const src = $('#toile');
   // recadrer sur le trait (image plus nette dans la case)
   const w = src.width, h = src.height, d = src.getContext('2d').getImageData(0, 0, w, h).data;
