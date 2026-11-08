@@ -213,6 +213,13 @@ function ouvrirFiche() {
     <label>${t("Une précision pour l'inspecteur ?")}</label><textarea name="notes" rows="3">${v('notes')}</textarea>
     <div style="margin-top:14px"><button type="submit" id="b-fiche">${t('Envoyer mes informations')}</button></div>
   </form>`;
+  // adresses : suggestions de Google Maps pendant que le client tape ; rue, ville et code postal se remplissent
+  const F = $('#fiche');
+  const brancher = (a, vi, cp) => window.suggestionsAdresse && suggestionsAdresse(F.elements[a], (q) => run('clientAdresses', J, q), (x) => {
+    F.elements[a].value = x.adresse; if (x.ville) F.elements[vi].value = x.ville; if (x.cp) F.elements[cp].value = x.cp; else F.elements[cp].focus();
+  });
+  brancher('adresse', 'ville', 'cp');
+  brancher('adresse_client', 'ville_client', 'cp_client');
   z.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -403,6 +410,51 @@ function validerPad() {
     }
   }, true);
 })();
+</script>
+<script>
+// Adresses : suggestions pendant qu'on tape (Google Maps, par l'application Google). Téléphone et ordinateur.
+// suggestionsAdresse(champ, chercher(texte) -> Promise<[{texte, adresse, ville, cp}]>, remplir(a))
+window.suggestionsAdresse = function (champ, chercher, remplir) {
+  if (!champ || champ.dataset.sugg) return;
+  champ.dataset.sugg = '1';
+  champ.setAttribute('autocomplete', 'off');
+  let minut = null, boite = null, n = 0;
+  const fermer = () => { if (boite) { boite.remove(); boite = null; } };
+  const ouvrir = (liste) => {
+    fermer();
+    if (!liste.length) return;
+    boite = document.createElement('div');
+    boite.setAttribute('role', 'listbox');
+    boite.style.cssText = 'border:1px solid #c9d3dc;border-radius:8px;margin:4px 0 8px;background:#fff;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.08)';
+    liste.forEach((a, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = '📍 ' + a.texte;
+      b.style.cssText = 'display:block;width:100%;text-align:left;padding:11px 12px;border:0;' + (i ? 'border-top:1px solid #eef1f4;' : '') +
+        'background:#fff;color:#1d2731;font:inherit;font-size:15px;cursor:pointer;margin:0;border-radius:0';
+      b.onmousedown = (e) => e.preventDefault();          // garder le champ actif pendant le clic
+      b.onclick = () => { fermer(); remplir(a); };
+      b.onmouseenter = () => { b.style.background = '#f1f6fa'; };
+      b.onmouseleave = () => { b.style.background = '#fff'; };
+      boite.appendChild(b);
+    });
+    champ.insertAdjacentElement('afterend', boite);
+  };
+  champ.addEventListener('input', () => {
+    clearTimeout(minut);
+    const q = champ.value.trim();
+    if (q.length < 6) { fermer(); return; }
+    minut = setTimeout(async () => {
+      const moi = ++n;
+      let r = [];
+      try { r = (await chercher(q)) || []; } catch (e) { return; }
+      if (moi !== n || champ.value.trim() !== q || document.activeElement !== champ) return;
+      ouvrir(r);
+    }, 550);
+  });
+  champ.addEventListener('blur', () => setTimeout(fermer, 200));
+  champ.addEventListener('keydown', (e) => { if (e.key === 'Escape') fermer(); });
+};
 </script>
 </body>
 </html>
