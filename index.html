@@ -215,7 +215,7 @@ function ouvrirFiche() {
   </form>`;
   // adresses : suggestions de Mapbox pendant que le client tape (seulement si la clé est installée) ; rue, ville et code postal se remplissent
   const F = $('#fiche');
-  const MAPBOX = '__MAPBOX__';
+  const MAPBOX = 'pk.eyJ1IjoiaW5zcGVjdGlvbmhhYiIsImEiOiJjbXc3NG42MDUwMGQ5MzBvNjE0YmhmeGdzIn0.SPdilwV2hmHME055636LcA';
   const brancher = (a, vi, cp) => MAPBOX.indexOf('__') !== 0 && window.suggestionsAdresse && suggestionsAdresse(F.elements[a], (q) => chercherMapbox(q, MAPBOX, enAnglais() ? 'en' : 'fr'), (x) => {
     F.elements[a].value = x.adresse; if (x.ville) F.elements[vi].value = x.ville; if (x.cp) F.elements[cp].value = x.cp; else F.elements[cp].focus();
   });
@@ -419,6 +419,7 @@ window.adresseQuebec = function (a, tape) {
   let num = m ? m[1] : '', rue = m ? m[2] : String(a.adresse || '');
   rue = rue.replace(/^(?:Québec|Quebec|QC|Qc|Route|Rte)[\s-]+(\d+)/i, 'route $1');
   rue = rue.replace(/^(Rue|Chemin|Route|Avenue|Boulevard|Montée|Rang|Impasse|Place|Croissant|Côte|Allée|Promenade|Terrasse|Carré|Ruelle|Sentier|Montee|Cote)\b/, (w) => w.toLowerCase());
+  rue = rue.replace(/^(\S+) (De La|De L'|De l'|Du|Des|De|D')(?=[ A-ZÀ-Ý])/, (t, g, p) => g + ' ' + p.toLowerCase());
   const dir = String(tape || '').match(/\b(nord|sud|est|ouest)\s*$/i) || String(tape || '').match(/\d+\s*(?:nord|sud|est|ouest)?\s+(nord|sud|est|ouest)\b/i);
   const mots = rue.toLowerCase().replace(/[^a-zà-ÿ]+/g, ' ').split(' ');
   if (dir && mots.indexOf(dir[1].toLowerCase()) < 0) rue += ' ' + dir[1].charAt(0).toUpperCase() + dir[1].slice(1).toLowerCase();
