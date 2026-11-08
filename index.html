@@ -372,5 +372,37 @@ function validerPad() {
   if (CASE_EN_COURS) apposer(CASE_EN_COURS, image);
 }
 </script>
+<script>
+// Téléphone : mis en forme tout seul, (819) 744-0563, peu importe comment il est tapé (téléphone et ordinateur).
+(function () {
+  const forme = (v) => {
+    if (/^\s*\+(?!\s*1)/.test(v)) return v;             // numéro étranger (+33…) : on n'y touche pas
+    let d = v.replace(/\D/g, '');
+    if (d[0] === '1') d = d.slice(1);                    // +1 / 1 du début : enlevé (aucun indicatif ne commence par 1)
+    if (d.length > 10) return v;                         // poste ou autre : laissé tel quel
+    if (!d) return '';
+    if (d.length <= 3) return '(' + d;
+    if (d.length <= 6) return '(' + d.slice(0, 3) + ') ' + d.slice(3);
+    return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6);
+  };
+  const estTel = (el) => el && el.tagName === 'INPUT' && (el.type === 'tel' || /^(telephone|tel|client_tel|co_telephone|telephone_client)$/.test(el.name || el.id));
+  document.addEventListener('input', (e) => {
+    const el = e.target; if (!estTel(el)) return;
+    el.setCustomValidity(''); el.style.borderColor = '';
+    if (/^delete/.test(e.inputType || '')) return;       // en effaçant, on laisse faire ; remis en forme en sortant du champ
+    if (el.selectionStart !== el.value.length) return;   // correction au milieu : remis en forme en sortant du champ
+    el.value = forme(el.value);
+  }, true);
+  document.addEventListener('blur', (e) => {
+    const el = e.target; if (!estTel(el) || !el.value.trim()) return;
+    el.value = forme(el.value);
+    const n = el.value.replace(/\D/g, '').replace(/^1/, '').length;
+    if (!/^\s*\+/.test(el.value) && n > 0 && n < 10) {
+      el.setCustomValidity(document.documentElement.lang === 'en' ? 'Incomplete number: 10 digits' : 'Numéro incomplet : 10 chiffres');
+      el.style.borderColor = '#c0392b';
+    }
+  }, true);
+})();
+</script>
 </body>
 </html>
