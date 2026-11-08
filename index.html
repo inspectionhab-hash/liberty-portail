@@ -48,6 +48,20 @@
   #pad .act { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
   .fichiers li { font-size: 14px; }
   .attente { text-align: center; padding: 60px 20px; color: var(--gris); }
+  /* demande de réparation */
+  .filtres { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+  .filtres button { background: #eef1f4; color: var(--encre); padding: 7px 12px; font-weight: 500; border-radius: 999px; }
+  .filtres button.actif { background: var(--a); color: #fff; }
+  .dr-item { border-top: 1px solid var(--trait); padding: 12px 0; }
+  .dr-item .tete { display: flex; gap: 10px; align-items: flex-start; }
+  .dr-item .tete input { width: 22px; height: 22px; flex: none; margin-top: 2px; }
+  .dr-item .titre { font-weight: 600; } .dr-item .sec { font-size: 13px; color: var(--gris); }
+  .dr-item .txt { font-size: 13.5px; color: #3c4752; margin-top: 3px; }
+  .dr-grav { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 1px 8px; border-radius: 999px; color: #fff; margin-right: 6px; }
+  .dr-choix { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; margin: 6px 0 0 32px; } .dr-choix .plein { grid-column: 1 / -1; }
+  @media (max-width: 520px) { .dr-choix { grid-template-columns: 1fr; margin-left: 0; } }
+  .dr-total { position: sticky; bottom: 0; background: #fff; border-top: 2px solid var(--trait); padding: 12px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .dr-total b { flex: 1; }
 </style>
 </head>
 <body>
@@ -117,6 +131,18 @@ const EN = {
   'Vos informations': 'Your information', 'Lien expiré': 'This link has expired', 'Lien invalide ou expiré.': 'Invalid or expired link.',
   'Pas de courriel pour ce client': 'No email address for this client', 'Accès refusé': 'Access denied', 'Merci ! Votre document est signé. Une copie vous sera envoyée.':
     'Thank you! Your document is signed. A copy will be sent to you.', 'Dessinez d\'abord.': 'Please draw first.',
+  // facture et demande de réparation
+  'J\'ai payé': 'I have paid', 'Confirmez-vous avoir envoyé le paiement ? Votre inspecteur le vérifiera.': 'Do you confirm you have sent the payment? Your inspector will verify it.',
+  'Préparer': 'Prepare', 'Modifier ma demande': 'Edit my request', 'Tous': 'All', 'Majeurs': 'Major', 'Modérés': 'Moderate', 'Mineurs': 'Minor',
+  'Majeur': 'Major', 'Modéré': 'Moderate', 'Mineur': 'Minor', 'Autres': 'Other',
+  'Réparer': 'Repair', 'Réduction du prix': 'Price reduction', 'Montant demandé ($)': 'Amount requested ($)', 'Note (facultatif)': 'Note (optional)',
+  'Total demandé': 'Total requested', 'point(s)': 'item(s)', 'Enregistrer ma demande': 'Save my request', 'Créer le PDF': 'Create the PDF',
+  'Demande enregistrée.': 'Request saved.', 'Cochez au moins un point.': 'Check at least one item.',
+  'Cette liste est à vous : vous la remplissez et la partagez avec qui vous voulez (votre courtier, par exemple).':
+    'This list is yours: you fill it in and share it with whomever you wish (your broker, for example).',
+  'Demande de réparation ou de réduction du prix': 'Request for repairs or price reduction',
+  'Propriété': 'Property', 'Préparée par': 'Prepared by', 'Date': 'Date', 'Point': 'Item', 'Demande': 'Request', 'Montant': 'Amount',
+  'Préparée à partir du rapport d\'inspection de ': 'Prepared from the inspection report by ', ', dossier ': ', file ',
 };
 const enAnglais = () => !!(P && P.langue === 'en');
 const t = (s) => (enAnglais() && EN[s] !== undefined ? EN[s] : s);
@@ -177,6 +203,8 @@ function dessiner() {
       ${!fait && e.doc_id ? `<button onclick='ouvrirLecteur(${JSON.stringify(e)})'>${t('Lire et signer')}</button>` : ''}
       ${e.cle === 'documents' ? `<button onclick="ouvrirDepot()">${t('Déposer')}</button>` : ''}
       ${e.lien ? `<a class="btn" href="${esc(e.lien)}" target="_blank">${t('Ouvrir')}</a>` : ''}
+      ${e.cle === 'facture' && e.paiement ? `<button class="sec" onclick="jaiPaye()">${t("J'ai payé")}</button>` : ''}
+      ${e.cle === 'demande' ? `<button onclick="ouvrirDemande()">${t(fait ? 'Modifier ma demande' : 'Préparer')}</button>` : ''}
     </div><div id="z-${esc(e.cle)}"></div></div>`;
   });
   $('#m').innerHTML = h;
@@ -231,6 +259,83 @@ async function envoyerFiche(ev) {
   new FormData($('#fiche')).forEach((v, k) => { d[k] = v; });
   try { P = await run('clientDeposer', J, 'fiche', d, appareil); dessiner(); window.scrollTo(0, 0); }
   catch (e) { b.disabled = false; b.textContent = t('Envoyer mes informations'); alert(t('Envoi impossible : ') + t(e.message)); }
+}
+
+// ---------------- facture : « J'ai payé » (l'inspecteur vérifie son compte et confirme) ----------------
+async function jaiPaye() {
+  if (!confirm(t('Confirmez-vous avoir envoyé le paiement ? Votre inspecteur le vérifiera.'))) return;
+  try { P = await run('clientDeposer', J, 'paiement_annonce', { mode: 'Interac' }, appareil); dessiner(); }
+  catch (e) { alert(t('Envoi impossible : ') + t(e.message)); }
+}
+
+// ---------------- demande de réparation ou de réduction du prix (préparée par le client lui-même) ----------------
+const GRAV = { majeur: ['Majeur', '#c0392b'], modere: ['Modéré', '#e08a1e'], mineur: ['Mineur', '#b89a05'], '': ['Autres', '#66727f'] };
+let DR = {}, DR_FILTRE = '';
+function ouvrirDemande() {
+  const prec = {};
+  ((P.demande_reparation || {}).items || []).forEach((i) => { prec[i.id] = i; });
+  DR = {};
+  (P.constats || []).forEach((c) => { DR[c.id] = { id: c.id, titre: c.titre, gravite: c.gravite || '', inclus: false, action: 'reparer', montant: '', note: '', ...(prec[c.id] || {}) }; });
+  dessinerDemande();
+  $('#z-demande').scrollIntoView({ behavior: 'smooth' });
+}
+function dessinerDemande() {
+  const L = (P.constats || []).filter((c) => !DR_FILTRE || (c.gravite || '') === DR_FILTRE);
+  const ordre = ['majeur', 'modere', 'mineur', ''];
+  const f = (k, n) => `<button class="${DR_FILTRE === k ? 'actif' : ''}" onclick="DR_FILTRE='${k}';dessinerDemande()">${t(n)}</button>`;
+  let h = `<div style="margin-top:12px"><div class="muted">${t('Cette liste est à vous : vous la remplissez et la partagez avec qui vous voulez (votre courtier, par exemple).')}</div>
+    <div class="filtres">${f('', 'Tous')}${f('majeur', 'Majeurs')}${f('modere', 'Modérés')}${f('mineur', 'Mineurs')}</div>`;
+  ordre.forEach((g) => {
+    L.filter((c) => (c.gravite || '') === g).forEach((c) => {
+      const d = DR[c.id];
+      h += `<div class="dr-item"><label class="tete" style="margin:0;color:inherit;font-size:inherit"><input type="checkbox" ${d.inclus ? 'checked' : ''} onchange="DR[${c.id}].inclus=this.checked;dessinerDemande()">
+        <div><span class="dr-grav" style="background:${GRAV[g][1]}">${t(GRAV[g][0])}</span><span class="titre">${esc(c.titre)}</span>
+          <div class="sec">${esc(c.section || '')}</div>${c.texte ? `<div class="txt">${esc(c.texte)}</div>` : ''}</div></label>
+        ${d.inclus ? `<div class="dr-choix">
+          <div><label>${t('Demande')}</label><select onchange="DR[${c.id}].action=this.value;totalDemande()"><option value="reparer" ${d.action === 'reparer' ? 'selected' : ''}>${t('Réparer')}</option><option value="credit" ${d.action === 'credit' ? 'selected' : ''}>${t('Réduction du prix')}</option></select></div>
+          <div><label>${t('Montant demandé ($)')}</label><input type="number" min="0" step="50" inputmode="decimal" value="${esc(d.montant)}" oninput="DR[${c.id}].montant=this.value;totalDemande()"></div>
+          <div class="plein"><label>${t('Note (facultatif)')}</label><input value="${esc(d.note)}" oninput="DR[${c.id}].note=this.value"></div></div>` : ''}</div>`;
+    });
+  });
+  h += `<div class="dr-total"><b id="dr-tot"></b><button class="sec" onclick="enregistrerDemande()">${t('Enregistrer ma demande')}</button><button onclick="pdfDemande()">${t('Créer le PDF')}</button></div></div>`;
+  $('#z-demande').innerHTML = h;
+  totalDemande();
+}
+const argent = (v) => (enAnglais() ? '$' + (Number(v) || 0).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  : (Number(v) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $');
+function choisis() { return Object.values(DR).filter((d) => d.inclus); }
+function totalDemande() {
+  const L = choisis();
+  const el = $('#dr-tot'); if (el) el.textContent = `${t('Total demandé')} : ${argent(L.reduce((s, d) => s + (Number(d.montant) || 0), 0))} · ${L.length} ${t('point(s)')}`;
+}
+async function enregistrerDemande(silencieux) {
+  try {
+    P = await run('clientDeposer', J, 'demande_reparation', { items: Object.values(DR).filter((d) => d.inclus || d.montant || d.note), maj: new Date().toISOString() }, appareil);
+    if (!silencieux) { alert(t('Demande enregistrée.')); dessiner(); ouvrirDemande(); }
+  } catch (e) { if (!silencieux) alert(t('Envoi impossible : ') + t(e.message)); }
+}
+function pdfDemande() {
+  const L = choisis();
+  if (!L.length) { alert(t('Cochez au moins un point.')); return; }
+  enregistrerDemande(true);
+  const d = P.dossier || {}, c = P.client || {};
+  const lignes = L.map((x, i) => `<tr><td>${i + 1}</td><td><b>${esc(x.titre)}</b>${x.note ? `<div class="n">${esc(x.note)}</div>` : ''}</td>
+    <td>${t(x.action === 'credit' ? 'Réduction du prix' : 'Réparer')}</td><td class="m">${x.montant ? argent(x.montant) : ''}</td></tr>`).join('');
+  const w = window.open('', '_blank');
+  w.document.write(`<!doctype html><html lang="${enAnglais() ? 'en' : 'fr'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${t('Demande de réparation ou de réduction du prix')}</title>
+    <style>body{font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#18212b;margin:28px;max-width:820px}
+    h1{font-size:20px;margin:0 0 4px;color:${P.couleur || '#1f5f8b'}}.s{color:#66727f;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;margin-top:10px}th,td{text-align:left;padding:8px 6px;border-bottom:1px solid #e2e6ea;vertical-align:top}
+    th{font-size:12px;color:#66727f;text-transform:uppercase}.m{text-align:right;white-space:nowrap}.n{color:#66727f;font-size:13px;margin-top:2px}
+    tfoot td{font-weight:700;border-top:2px solid #18212b;border-bottom:0}.p{margin-top:22px;color:#66727f;font-size:12px}
+    @media print{body{margin:12mm}}</style></head><body>
+    <h1>${t('Demande de réparation ou de réduction du prix')}</h1>
+    <div class="s">${t('Propriété')} : <b>${esc(d.adresse || '')}${d.ville ? ', ' + esc(d.ville) : ''}</b><br>${t('Préparée par')} : ${esc(c.nom || '')} · ${t('Date')} : ${new Date().toLocaleDateString(enAnglais() ? 'en-CA' : 'fr-CA')}</div>
+    <table><thead><tr><th>#</th><th>${t('Point')}</th><th>${t('Demande')}</th><th class="m">${t('Montant')}</th></tr></thead><tbody>${lignes}</tbody>
+    <tfoot><tr><td></td><td colspan="2">${t('Total demandé')}</td><td class="m">${argent(L.reduce((s, x) => s + (Number(x.montant) || 0), 0))}</td></tr></tfoot></table>
+    <div class="p">${t('Préparée à partir du rapport d\'inspection de ')}${esc(P.entreprise || '')}${t(', dossier ')}${esc(d.numero || '')}.</div>
+    <script>setTimeout(function(){window.print()},400)<\/script></body></html>`);
+  w.document.close();
 }
 
 // ---------------- dépôt de documents ----------------
