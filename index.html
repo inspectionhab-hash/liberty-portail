@@ -213,9 +213,10 @@ function ouvrirFiche() {
     <label>${t("Une précision pour l'inspecteur ?")}</label><textarea name="notes" rows="3">${v('notes')}</textarea>
     <div style="margin-top:14px"><button type="submit" id="b-fiche">${t('Envoyer mes informations')}</button></div>
   </form>`;
-  // adresses : suggestions de Google Maps pendant que le client tape ; rue, ville et code postal se remplissent
+  // adresses : suggestions de Mapbox pendant que le client tape (seulement si la clé est installée) ; rue, ville et code postal se remplissent
   const F = $('#fiche');
-  const brancher = (a, vi, cp) => window.suggestionsAdresse && suggestionsAdresse(F.elements[a], (q) => run('clientAdresses', J, q), (x) => {
+  const MAPBOX = '__MAPBOX__';
+  const brancher = (a, vi, cp) => MAPBOX.indexOf('__') !== 0 && window.suggestionsAdresse && suggestionsAdresse(F.elements[a], (q) => chercherMapbox(q, MAPBOX, enAnglais() ? 'en' : 'fr'), (x) => {
     F.elements[a].value = x.adresse; if (x.ville) F.elements[vi].value = x.ville; if (x.cp) F.elements[cp].value = x.cp; else F.elements[cp].focus();
   });
   brancher('adresse', 'ville', 'cp');
@@ -423,7 +424,21 @@ window.adresseQuebec = function (a, tape) {
   if (dir && mots.indexOf(dir[1].toLowerCase()) < 0) rue += ' ' + dir[1].charAt(0).toUpperCase() + dir[1].slice(1).toLowerCase();
   return Object.assign({}, a, { adresse: num ? num + ', ' + rue : rue });
 };
-// Adresses : suggestions pendant qu'on tape (Google Maps, par l'application Google). Téléphone et ordinateur.
+// Mapbox (comme Habita) : jusqu'à 5 vraies adresses pendant qu'on tape, près de l'Outaouais d'abord.
+window.chercherMapbox = async function (q, jeton, langue) {
+  if (!jeton) return [];
+  const u = 'https://api.mapbox.com/geocoding/v5/mapbox.places/' + encodeURIComponent(q) + '.json?access_token=' + encodeURIComponent(jeton) +
+    '&country=ca&types=address&autocomplete=true&limit=5&proximity=-75.45,45.65&language=' + (langue === 'en' ? 'en' : 'fr');
+  const r = await fetch(u);
+  if (!r.ok) return [];
+  const d = await r.json();
+  return (d.features || []).map((f) => {
+    const c = (t) => ((f.context || []).find((x) => String(x.id || '').indexOf(t + '.') === 0) || {}).text || '';
+    return { texte: String(f.place_name || '').replace(/, Canada$/, ''), adresse: [f.address, f.text].filter(Boolean).join(' '),
+      ville: c('place') || c('locality'), cp: c('postcode'), lat: f.center && f.center[1], lng: f.center && f.center[0] };
+  });
+};
+// Adresses : suggestions pendant qu'on tape. Téléphone et ordinateur.
 // suggestionsAdresse(champ, chercher(texte) -> Promise<[{texte, adresse, ville, cp}]>, remplir(a))
 window.suggestionsAdresse = function (champ, chercher, remplir) {
   if (!champ || champ.dataset.sugg) return;
