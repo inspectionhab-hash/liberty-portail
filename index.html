@@ -412,6 +412,17 @@ function validerPad() {
 })();
 </script>
 <script>
+// Adresse à la québécoise : « 25, rue Laurier », « 56, route 309 Sud » (Google donne « 25 Rue Laurier », « 56 Québec 309 »).
+window.adresseQuebec = function (a, tape) {
+  const m = String(a.adresse || '').match(/^(\d+[A-Za-z]?(?:-\d+)?)\s+(.+)$/);
+  let num = m ? m[1] : '', rue = m ? m[2] : String(a.adresse || '');
+  rue = rue.replace(/^(?:Québec|Quebec|QC|Qc|Route|Rte)[\s-]+(\d+)/i, 'route $1');
+  rue = rue.replace(/^(Rue|Chemin|Route|Avenue|Boulevard|Montée|Rang|Impasse|Place|Croissant|Côte|Allée|Promenade|Terrasse|Carré|Ruelle|Sentier|Montee|Cote)\b/, (w) => w.toLowerCase());
+  const dir = String(tape || '').match(/\b(nord|sud|est|ouest)\s*$/i) || String(tape || '').match(/\d+\s*(?:nord|sud|est|ouest)?\s+(nord|sud|est|ouest)\b/i);
+  const mots = rue.toLowerCase().replace(/[^a-zà-ÿ]+/g, ' ').split(' ');
+  if (dir && mots.indexOf(dir[1].toLowerCase()) < 0) rue += ' ' + dir[1].charAt(0).toUpperCase() + dir[1].slice(1).toLowerCase();
+  return Object.assign({}, a, { adresse: num ? num + ', ' + rue : rue });
+};
 // Adresses : suggestions pendant qu'on tape (Google Maps, par l'application Google). Téléphone et ordinateur.
 // suggestionsAdresse(champ, chercher(texte) -> Promise<[{texte, adresse, ville, cp}]>, remplir(a))
 window.suggestionsAdresse = function (champ, chercher, remplir) {
@@ -431,9 +442,9 @@ window.suggestionsAdresse = function (champ, chercher, remplir) {
       b.type = 'button';
       b.textContent = '📍 ' + a.texte;
       b.style.cssText = 'display:block;width:100%;text-align:left;padding:11px 12px;border:0;' + (i ? 'border-top:1px solid #eef1f4;' : '') +
-        'background:#fff;color:#1d2731;font:inherit;font-size:15px;cursor:pointer;margin:0;border-radius:0';
+        'background:#fff;color:#1d2731;font:inherit;font-size:15px;font-weight:400;cursor:pointer;margin:0;border-radius:0';
       b.onmousedown = (e) => e.preventDefault();          // garder le champ actif pendant le clic
-      b.onclick = () => { fermer(); remplir(a); };
+      b.onclick = () => { fermer(); remplir(window.adresseQuebec ? window.adresseQuebec(a, champ.value) : a); };
       b.onmouseenter = () => { b.style.background = '#f1f6fa'; };
       b.onmouseleave = () => { b.style.background = '#fff'; };
       boite.appendChild(b);
