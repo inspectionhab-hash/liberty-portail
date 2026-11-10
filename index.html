@@ -178,7 +178,7 @@ async function charger(premiere) {
   $('#sous').textContent = [d.adresse, d.date ? dateLongue(d.date) + (d.heure ? (enAnglais() ? ' at ' : ' à ') + heureTxt(d.heure) : '') : ''].filter(Boolean).join(' · ');
   dessiner();
   // lien direct vers un document (ex. attestation signée sur place)
-  if (premiere && PARAM.doc) { const e = (P.etapes || []).find((x) => x.cle === PARAM.doc || x.doc_id === PARAM.doc); if (e && e.doc_id && e.etat !== 'signe') ouvrirLecteur(e); }
+  if (premiere && PARAM.doc) { const e = (P.etapes || []).find((x) => x.cle === PARAM.doc || String(x.doc_id) === String(PARAM.doc)); if (e && e.doc_id && e.etat !== 'signe') ouvrirLecteur(e); }
 }
 
 function heureTxt(h) {
@@ -200,7 +200,7 @@ function dessiner() {
     h += `<div class="carte"><div class="etape ${fait ? 'fait' : 'afaire'}"><div class="n">${fait ? '✓' : i + 1}</div>
       <div class="t"><b>${esc(t(e.titre))}</b><span>${esc(e.sous ? t(e.sous) : (fait ? (e.etat === 'signe' ? t('Signé, merci !') : t('Reçu, merci !')) : ''))}</span></div>
       ${!fait && e.cle === 'fiche' ? `<button onclick="ouvrirFiche()">${t('Remplir')}</button>` : ''}
-      ${!fait && e.doc_id ? `<button onclick='ouvrirLecteur(${JSON.stringify(e)})'>${t('Lire et signer')}</button>` : ''}
+      ${!fait && e.doc_id ? `<button onclick="ouvrirLecteur(P.etapes[${i}])">${t('Lire et signer')}</button>` : ''}
       ${e.cle === 'documents' ? `<button onclick="ouvrirDepot()">${t('Déposer')}</button>` : ''}
       ${e.lien ? `<a class="btn" href="${esc(e.lien)}" target="_blank">${t('Ouvrir')}</a>` : ''}
       ${e.cle === 'facture' && e.paiement ? `<button class="sec" onclick="jaiPaye()">${t("J'ai payé")}</button>` : ''}
