@@ -116,7 +116,13 @@ const EN = {
   'Condominium (copropriété)': 'Condominium', 'Chalet': 'Cottage', 'Autre': 'Other',
   'L\'immeuble est': 'The property is', 'Occupé': 'Occupied', 'Vacant': 'Vacant',
   'Code de boîte à clé (si vacant)': 'Lockbox code (if vacant)', 'Votre courtier (facultatif)': 'Your real estate broker (optional)',
-  'Téléphone ou courriel': 'Phone or email', 'Le rendez-vous': 'The appointment', 'Entendu : ': 'Agreed: ',
+  'Téléphone ou courriel': 'Phone or email', 'Agence': 'Agency', 'Téléphone': 'Phone',
+  'J\'autorise mon inspecteur à demander à mon courtier les documents utiles à l\'inspection (déclaration du vendeur, fiche descriptive).':
+    'I authorize my inspector to ask my broker for the documents useful to the inspection (seller\'s declaration, listing sheet).',
+  'Comment nous avez-vous trouvés ?': 'How did you find us?', 'Choisir…': 'Choose…', 'Mon courtier immobilier': 'My real estate broker',
+  'Recherche Google': 'Google search', 'Ami ou famille': 'Friend or family', 'Déjà client': 'Past client',
+  'Facebook ou réseaux sociaux': 'Facebook or social media', 'Précisez (facultatif)': 'Details (optional)',
+'Le rendez-vous': 'The appointment', 'Entendu : ': 'Agreed: ',
   'Date souhaitée': 'Preferred date', 'Moment': 'Time of day', 'Matin': 'Morning', 'Après-midi': 'Afternoon', 'Peu importe': 'No preference',
   'Je confirme le prix entendu de ': 'I confirm the agreed price of ', ' $ plus taxes.': ' $ plus taxes.',
   'Une précision pour l\'inspecteur ?': 'Anything the inspector should know?', 'Envoyer mes informations': 'Send my information',
@@ -233,7 +239,13 @@ function ouvrirFiche() {
     <div class="deux"><div><label>${t("L'immeuble est")}</label><select name="occupation">${['Occupé', 'Vacant'].map((x) => `<option value="${x}" ${f.occupation === x ? 'selected' : ''}>${t(x)}</option>`).join('')}</select></div>
       <div><label>${t("Code de boîte à clé (si vacant)")}</label><input name="boite_cle" value="${v('boite_cle')}"></div></div>
     <h3>${t("Votre courtier (facultatif)")}</h3>
-    <div class="deux"><div><label>${t("Nom")}</label><input name="courtier_nom" value="${v('courtier_nom')}"></div><div><label>${t("Téléphone ou courriel")}</label><input name="courtier_contact" value="${v('courtier_contact')}"></div></div>
+    <div class="deux"><div><label>${t("Nom")}</label><input name="courtier_nom" value="${v('courtier_nom')}"></div><div><label>${t("Agence")}</label><input name="courtier_agence" value="${v('courtier_agence')}"></div></div>
+    <div class="deux"><div><label>${t("Téléphone")}</label><input name="courtier_tel" type="tel" value="${v('courtier_tel', /@/.test(f.courtier_contact || '') ? '' : (f.courtier_contact || ''))}"></div>
+      <div><label>${t("Courriel")}</label><input name="courtier_courriel" type="email" value="${v('courtier_courriel', /@/.test(f.courtier_contact || '') ? f.courtier_contact : '')}"></div></div>
+    <label class="case-a-cocher"><input type="checkbox" name="courtier_autorise" ${f.courtier_autorise ? 'checked' : ''}> ${t("J'autorise mon inspecteur à demander à mon courtier les documents utiles à l'inspection (déclaration du vendeur, fiche descriptive).")}</label>
+    <h3>${t("Comment nous avez-vous trouvés ?")}</h3>
+    <div class="deux"><div><select name="provenance" required><option value="">${t("Choisir…")}</option>${['Mon courtier immobilier', 'Recherche Google', 'Ami ou famille', 'Déjà client', 'Facebook ou réseaux sociaux', 'Autre'].map((x) => `<option value="${x}" ${f.provenance === x ? 'selected' : ''}>${t(x)}</option>`).join('')}</select></div>
+      <div><input name="provenance_precision" placeholder="${t('Précisez (facultatif)')}" value="${v('provenance_precision')}"></div></div>
     <h3>${t("Le rendez-vous")}</h3>
     ${d.date ? `<div class="muted">${t('Entendu : ')}<b>${esc(dateLongue(d.date))}${d.heure ? (enAnglais() ? ' at ' : ' à ') + esc(heureTxt(d.heure)) : ''}</b></div>` :
       `<div class="deux"><div><label>${t("Date souhaitée")}</label><input name="date_souhaitee" type="date" value="${v('date_souhaitee')}"></div><div><label>${t("Moment")}</label><select name="moment">${['Matin', 'Après-midi', 'Peu importe'].map((x) => `<option value="${x}">${t(x)}</option>`).join('')}</select></div></div>`}
