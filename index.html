@@ -107,7 +107,7 @@ const EN = {
     'Here are the steps for your inspection file. Everything is done here, on your phone or computer.',
   'Signé, merci !': 'Signed, thank you!', 'Reçu, merci !': 'Received, thank you!', 'Remplir': 'Fill in',
   'Lire et signer': 'Read and sign', 'Déposer': 'Upload', 'Ouvrir': 'Open',
-  'Vous': 'You', 'Nom complet *': 'Full name *', 'Téléphone *': 'Phone *', 'Courriel *': 'Email *',
+  'Vous': 'You', 'Nom complet *': 'Full name *', 'Entreprise (si vous achetez pour une compagnie)': 'Company (if buying for a company)','Téléphone *': 'Phone *', 'Courriel *': 'Email *',
   'Votre adresse actuelle (pour la facture)': 'Your current address (for the invoice)', 'Ville': 'City', 'Code postal': 'Postal code',
   'Un deuxième acheteur ? (facultatif)': 'A second buyer? (optional)', 'Nom': 'Name', 'Courriel': 'Email',
   'L\'immeuble à inspecter': 'The property to inspect', 'Adresse *': 'Address *', 'Ville *': 'City *',
@@ -225,6 +225,7 @@ function ouvrirFiche() {
   z.innerHTML = `<form id="fiche" onsubmit="envoyerFiche(event)">
     <h3>${t("Vous")}</h3>
     <label>${t("Nom complet *")}</label><input name="nom" required value="${v('nom', c.nom)}">
+    <label>${t("Entreprise (si vous achetez pour une compagnie)")}</label><input name="entreprise" value="${v('entreprise', c.entreprise)}">
     <div class="deux"><div><label>${t("Téléphone *")}</label><input name="telephone" type="tel" required value="${v('telephone', c.telephone)}"></div>
       <div><label>${t("Courriel *")}</label><input name="courriel" type="email" required value="${v('courriel', c.courriel)}"></div></div>
     <label>${t("Votre adresse actuelle (pour la facture)")}</label><input name="adresse_client" value="${v('adresse_client')}">
