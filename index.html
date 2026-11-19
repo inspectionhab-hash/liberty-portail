@@ -200,7 +200,10 @@ function dateLongue(s) {
 function dessiner() {
   const E = P.etapes || [];
   let h = `<div class="carte"><h2>${t('Bonjour')}${P.client && P.client.nom ? ' ' + esc(P.client.nom.split(' ')[0]) : ''},</h2>
-    <div class="muted">${t("Voici les étapes de votre dossier d'inspection. Tout se fait ici, sur votre téléphone ou votre ordinateur.")}</div></div>`;
+    <div class="muted">${P.role === 'courtier'
+      ? (enAnglais() ? 'Thank you for your help. Upload the documents for this inspection here; they go straight into our file.'
+        : 'Merci de votre collaboration. Déposez ici les documents pour cette inspection : ils arrivent directement dans notre dossier.')
+      : t("Voici les étapes de votre dossier d'inspection. Tout se fait ici, sur votre téléphone ou votre ordinateur.")}</div></div>`;
   E.forEach((e, i) => {
     const fait = ['recu', 'signe', 'fait'].includes(e.etat);
     h += `<div class="carte"><div class="etape ${fait ? 'fait' : 'afaire'}"><div class="n">${fait ? '✓' : i + 1}</div>
