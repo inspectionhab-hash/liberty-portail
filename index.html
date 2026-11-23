@@ -10,6 +10,11 @@
   body { margin: 0; background: var(--fond); color: var(--encre); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   .haut { background: var(--a); color: #fff; padding: 18px 18px 22px; }
   .haut h1 { margin: 0; font-size: 20px; } .haut .s { opacity: .85; font-size: 14px; margin-top: 2px; }
+  .haut { position: relative; } .haut h1, .haut .s { padding-right: 92px; }
+  .lg { position: absolute; top: 14px; right: 14px; background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.55);
+        border-radius: 999px; padding: 6px 13px; font: 600 13px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; cursor: pointer; width: auto; margin: 0; }
+  .lg:hover { background: rgba(255,255,255,.28); }
+  .prep { font-size: 13px; color: var(--gris); max-width: 170px; text-align: right; }
   main { max-width: 760px; margin: -12px auto 40px; padding: 0 12px; }
   .carte { background: #fff; border: 1px solid var(--trait); border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(16,24,40,.06); }
   .etape { display: flex; gap: 12px; align-items: center; }
@@ -65,7 +70,8 @@
 </style>
 </head>
 <body>
-<div class="haut"><h1 id="titre">Votre inspection</h1><div class="s" id="sous"></div></div>
+<div class="haut"><h1 id="titre">Votre inspection</h1><div class="s" id="sous"></div>
+  <button class="lg" id="lg" hidden onclick="basculerLangue()" aria-label="English / Français">English</button></div>
 <main id="m"><div class="attente">Chargement…</div></main>
 
 <div id="lecteur">
@@ -176,16 +182,63 @@ google.script.url.getLocation((loc) => {
 async function charger(premiere) {
   try { P = await run('clientLire', J); } catch (e) { $('#m').innerHTML = `<div class="carte">${t("Impossible d'ouvrir votre dossier : ")}${esc(t(e.message))}</div>`; return; }
   if (!P) { $('#m').innerHTML = `<div class="carte">${t("Ce lien n'est plus valide. Communiquez avec votre inspecteur.")}</div>`; return; }
-  traduirePage();
+  appliquerChoix();
   if (premiere) run('clientVu', J).catch(() => {});
   document.documentElement.style.setProperty('--a', P.couleur || '#1f5f8b');
-  $('#titre').textContent = P.entreprise || t('Votre inspection');
-  const d = P.dossier || {};
-  $('#sous').textContent = [d.adresse, d.date ? dateLongue(d.date) + (d.heure ? (enAnglais() ? ' at ' : ' à ') + heureTxt(d.heure) : '') : ''].filter(Boolean).join(' · ');
+  entete();
   dessiner();
+  // il a changé de langue : l'inspecteur republie son dossier (convention comprise) d'ici quelques minutes
+  if (P._attenteLangue) setTimeout(() => { if ($('#lecteur').style.display !== 'block' && $('#pad').style.display !== 'block') charger(false); }, 45000);
   // lien direct vers un document (ex. attestation signée sur place)
   if (premiere && PARAM.doc) { const e = (P.etapes || []).find((x) => x.cle === PARAM.doc || String(x.doc_id) === String(PARAM.doc)); if (e && e.doc_id && e.etat !== 'signe') ouvrirLecteur(e); }
 }
+
+function entete() {
+  traduirePage();
+  $('#titre').textContent = P.entreprise || t('Votre inspection');
+  const d = P.dossier || {};
+  $('#sous').textContent = [d.adresse, d.date ? dateLongue(d.date) + (d.heure ? (enAnglais() ? ' at ' : ' à ') + heureTxt(d.heure) : '') : ''].filter(Boolean).join(' · ');
+  const b = $('#lg');  // 22 nov. 2026 : le client choisit sa langue lui-même ; son dossier (convention, courriels, rapport) suit
+  b.hidden = P.role === 'courtier';
+  b.textContent = enAnglais() ? 'Français' : 'English';
+}
+
+// ---------------- langue choisie par le client ----------------
+const cleLangue = () => 'liberty.langue.' + J;
+function lireChoix() { try { return localStorage.getItem(cleLangue()) || ''; } catch (e) { return ''; } }
+function permuter(c) {  // l'autre langue est publiée d'avance (P.autre) : on l'affiche tout de suite
+  if (P.langue === c) return;
+  const ancien = { langue: P.langue, etapes: P.etapes };
+  if (P.autre && P.autre.langue === c) P.etapes = P.autre.etapes;
+  P.autre = ancien;
+  P.langue = c;
+}
+function appliquerChoix() {
+  const c = lireChoix();
+  if (!c) return;
+  if (P.langue === c) { try { localStorage.removeItem(cleLangue()); } catch (e) {} return; }  // Liberty a suivi
+  permuter(c);
+  P._attenteLangue = true;
+}
+window.basculerLangue = function () {
+  const c = enAnglais() ? 'fr' : 'en';
+  try { localStorage.setItem(cleLangue(), c); } catch (e) {}
+  // ce qu'il a déjà tapé dans le formulaire n'est pas perdu
+  const garde = [...document.querySelectorAll('#fiche [name]')].map((x) => [x.name, x.type === 'checkbox' || x.type === 'radio' ? x.checked : x.value, x.type, x.value]);
+  const ficheOuverte = !!$('#fiche');
+  permuter(c);
+  P._attenteLangue = true;
+  entete();
+  dessiner();
+  if (ficheOuverte && !$('#fiche')) ouvrirFiche();
+  garde.forEach(([n, v, type, val]) => {
+    const el = type === 'radio' ? document.querySelector(`#fiche [name="${n}"][value="${CSS.escape(val)}"]`) : document.querySelector(`#fiche [name="${n}"]`);
+    if (!el) return;
+    if (type === 'checkbox' || type === 'radio') el.checked = v; else el.value = v;
+  });
+  run('clientDeposer', J, 'langue', { langue: c }, appareil).catch(() => {});  // sa réponse est l'ancien paquet : on la laisse
+  setTimeout(() => { if ($('#lecteur').style.display !== 'block' && $('#pad').style.display !== 'block') charger(false); }, 45000);
+};
 
 function heureTxt(h) {
   if (!h) return ''; const [a, b] = h.split(':');
@@ -195,6 +248,12 @@ function heureTxt(h) {
 function dateLongue(s) {
   const [y, m, j] = s.split('-').map(Number);
   return new Date(y, m - 1, j).toLocaleDateString(enAnglais() ? 'en-CA' : 'fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+// le document dans la langue qu'il a choisie ? (une convention déjà commencée reste dans sa langue : Liberty ne la refait pas)
+function docPret(e) {
+  const d = (P.docs || {})[e.doc_id] || {};
+  return !P._attenteLangue || !d.langue || d.langue === P.langue;
 }
 
 function dessiner() {
@@ -209,7 +268,8 @@ function dessiner() {
     h += `<div class="carte"><div class="etape ${fait ? 'fait' : 'afaire'}"><div class="n">${fait ? '✓' : i + 1}</div>
       <div class="t"><b>${esc(t(e.titre))}</b><span>${esc(e.sous ? t(e.sous) : (fait ? (e.etat === 'signe' ? t('Signé, merci !') : t('Reçu, merci !')) : ''))}</span></div>
       ${!fait && e.cle === 'fiche' ? `<button onclick="ouvrirFiche()">${t('Remplir')}</button>` : ''}
-      ${!fait && e.doc_id ? `<button onclick="ouvrirLecteur(P.etapes[${i}])">${t('Lire et signer')}</button>` : ''}
+      ${!fait && e.doc_id ? (docPret(e) ? `<button onclick="ouvrirLecteur(P.etapes[${i}])">${t('Lire et signer')}</button>`
+        : `<span class="prep">${enAnglais() ? 'Being prepared in English: available in a few minutes.' : 'En préparation en français : disponible dans quelques minutes.'}</span>`) : ''}
       ${e.cle === 'documents' ? `<button onclick="ouvrirDepot()">${t('Déposer')}</button>` : ''}
       ${e.lien ? `<a class="btn" href="${esc(e.lien)}" target="_blank">${t('Ouvrir')}</a>` : ''}
       ${e.cle === 'facture' && e.paiement ? `<button class="sec" onclick="jaiPaye()">${t("J'ai payé")}</button>` : ''}
