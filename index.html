@@ -116,6 +116,7 @@ const EN = {
   'Vous': 'You', 'Nom complet *': 'Full name *', 'Entreprise (si vous achetez pour une compagnie)': 'Company (if buying for a company)','Téléphone *': 'Phone *', 'Courriel *': 'Email *',
   'Votre adresse actuelle (pour la facture)': 'Your current address (for the invoice)', 'Ville': 'City', 'Code postal': 'Postal code',
   'Un deuxième acheteur ? (facultatif)': 'A second buyer? (optional)', 'Nom': 'Name', 'Courriel': 'Email',
+  'Sa langue (courriels, convention et rapport)': 'Their language (emails, agreement and report)',
   'L\'immeuble à inspecter': 'The property to inspect', 'Adresse *': 'Address *', 'Ville *': 'City *',
   'Type d\'immeuble': 'Type of property', 'Année de construction (si connue)': 'Year built (if known)',
   'Unifamiliale': 'Single-family', 'Duplex': 'Duplex', 'Triplex': 'Triplex', 'Multilogement': 'Multi-unit',
@@ -295,6 +296,7 @@ function ouvrirFiche() {
     <div class="deux"><div><label>${t("Ville")}</label><input name="ville_client" value="${v('ville_client')}"></div><div><label>${t("Code postal")}</label><input name="cp_client" value="${v('cp_client')}"></div></div>
     <h3>${t("Un deuxième acheteur ? (facultatif)")}</h3>
     <div class="deux"><div><label>${t("Nom")}</label><input name="co_nom" value="${v('co_nom')}"></div><div><label>${t("Courriel")}</label><input name="co_courriel" type="email" value="${v('co_courriel')}"></div></div>
+    <label>${t("Sa langue (courriels, convention et rapport)")}</label><select name="co_langue">${[['fr', 'Français'], ['en', 'English']].map(([k, n]) => `<option value="${k}" ${(f.co_langue || (enAnglais() ? 'en' : 'fr')) === k ? 'selected' : ''}>${n}</option>`).join('')}</select>
     <h3>${t("L'immeuble à inspecter")}</h3>
     <label>${t("Adresse *")}</label><input name="adresse" required value="${v('adresse', d.adresse)}">
     <div class="deux"><div><label>${t("Ville *")}</label><input name="ville" required value="${v('ville', d.ville)}"></div><div><label>${t("Code postal")}</label><input name="cp" value="${v('cp')}"></div></div>
