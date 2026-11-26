@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Réserver une inspection</title>
+<style>
+  :root { --nuit: #0c1c2b; --bleu: #1f5a8a; --bleu-clair: #e8f0f7; --menthe: #34c38f; --encre: #1d2731; --gris: #5b6b7a; --trait: #dbe3ea; --fond: #f5f7f9; --carte: #fff; --rouge: #b3261e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--encre); background: var(--fond); }
+  header { background: var(--nuit); color: #fff; padding: 18px 16px 22px; }
+  header .haut { max-width: 640px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  header h1 { margin: 6px auto 0; max-width: 640px; font-size: 23px; line-height: 1.25; }
+  header .ent { font-weight: 600; opacity: .85; font-size: 14px; }
+  .lg { background: transparent; border: 1px solid rgba(255,255,255,.4); color: #fff; border-radius: 20px; padding: 5px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px 16px 40px; }
+  .carte { background: var(--carte); border: 1px solid var(--trait); border-radius: 14px; padding: 18px 16px; margin-bottom: 14px; }
+  .carte h2 { margin: 0 0 12px; font-size: 17px; display: flex; gap: 10px; align-items: center; }
+  .num { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--bleu); color: #fff; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; }
+  label { display: block; font-size: 14px; font-weight: 600; margin: 12px 0 5px; }
+  label .fac { font-weight: 400; color: var(--gris); }
+  input, select, textarea { width: 100%; font: inherit; font-size: 16px; padding: 11px 12px; border: 1px solid #c9d3dc; border-radius: 10px; background: #fff; color: var(--encre); }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--bleu); outline-offset: 0; border-color: var(--bleu); }
+  .choix { display: flex; gap: 8px; flex-wrap: wrap; }
+  .choix label { margin: 0; font-weight: 500; display: flex; align-items: center; gap: 8px; border: 1px solid #c9d3dc; border-radius: 10px; padding: 10px 14px; cursor: pointer; background: #fff; }
+  .choix input { width: auto; margin: 0; }
+  .prix { background: var(--bleu-clair); border-radius: 12px; padding: 14px; }
+  .prix .ligne { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+  .prix .total { border-top: 1px solid #c4d6e6; margin-top: 6px; padding-top: 8px; font-weight: 700; font-size: 18px; }
+  .muted { color: var(--gris); font-size: 14px; }
+  .plages { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; }
+  .plage { border: 1.5px solid #c9d3dc; background: #fff; border-radius: 10px; padding: 12px; font: inherit; font-size: 15px; text-align: left; cursor: pointer; color: var(--encre); }
+  .plage[aria-pressed="true"] { border-color: var(--bleu); background: var(--bleu-clair); box-shadow: inset 0 0 0 1px var(--bleu); font-weight: 600; }
+  .avis { border-left: 4px solid var(--menthe); background: #eefaf4; padding: 10px 12px; border-radius: 8px; font-size: 14px; margin-top: 12px; }
+  .demande { border-left: 4px solid #e0a43a; background: #fdf6e9; padding: 12px; border-radius: 8px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 12px; background: var(--bleu); color: #fff; font: inherit; font-weight: 700; font-size: 17px; padding: 14px 18px; cursor: pointer; width: 100%; text-decoration: none; }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .btn.sec { background: #fff; color: var(--bleu); border: 1.5px solid var(--bleu); }
+  .consent { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; font-size: 14px; }
+  .consent input { width: auto; margin-top: 3px; }
+  .erreur { color: var(--rouge); font-size: 14px; margin-top: 8px; }
+  .cache { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .fini { text-align: center; padding: 26px 16px; }
+  .fini .rond { width: 58px; height: 58px; border-radius: 50%; background: var(--menthe); color: #fff; font-size: 30px; display: inline-flex; align-items: center; justify-content: center; }
+  [hidden] { display: none !important; }
+  a { color: var(--bleu); }
+</style>
+</head>
+<body>
+<header>
+  <div class="haut"><span class="ent" id="ent">Inspection Habitation Outaouais</span><button class="lg" id="lg" type="button">English</button></div>
+  <h1 id="titre" data-t="Réserver votre inspection">Réserver votre inspection</h1>
+</header>
+<main>
+  <div class="carte" id="ferme" hidden><p id="ferme-txt"></p><a class="btn sec" id="ferme-tel" href="#"></a></div>
+
+  <form id="f" novalidate hidden>
+    <div class="carte">
+      <h2><span class="num">1</span><span data-t="La propriété">La propriété</span></h2>
+      <label for="adresse" data-t="Adresse de la propriété">Adresse de la propriété</label>
+      <input id="adresse" autocomplete="off" placeholder="ex. 45, rue Laval, Gatineau">
+      <label for="ligne" data-t="Type de propriété">Type de propriété</label>
+      <select id="ligne"></select>
+      <div class="erreur" id="err-prop" hidden></div>
+    </div>
+
+    <div class="carte" id="c-prix" hidden>
+      <h2><span class="num">2</span><span data-t="Votre prix et vos dates">Votre prix et vos dates</span></h2>
+      <div id="calcul" class="muted"></div>
+      <div class="prix" id="prix" hidden></div>
+      <div id="demande" class="demande" hidden></div>
+      <div id="bloc-plages" hidden>
+        <div class="avis" data-t="Vérifiez l'heure avec votre courtier avant de réserver : c'est lui qui s'entend avec le vendeur pour l'accès.">Vérifiez l'heure avec votre courtier avant de réserver : c'est lui qui s'entend avec le vendeur pour l'accès.</div>
+        <div class="plages" id="plages" role="group"></div>
+      </div>
+    </div>
+
+    <div class="carte" id="c-coord" hidden>
+      <h2><span class="num">3</span><span data-t="Vos coordonnées">Vos coordonnées</span></h2>
+      <div class="choix" role="radiogroup">
+        <label><input type="radio" name="role" value="acheteur" checked> <span data-t="Je suis l'acheteur">Je suis l'acheteur</span></label>
+        <label><input type="radio" name="role" value="courtier"> <span data-t="Je suis le courtier">Je suis le courtier</span></label>
+      </div>
+      <label for="nom" data-t="Nom complet">Nom complet</label><input id="nom" autocomplete="name">
+      <label for="courriel" data-t="Courriel">Courriel</label><input id="courriel" type="email" autocomplete="email">
+      <label for="tel" data-t="Téléphone">Téléphone</label><input id="tel" type="tel" autocomplete="tel">
+      <label for="courtier"><span id="lbl-courtier" data-t="Nom de votre courtier">Nom de votre courtier</span> <span class="fac" data-t="(facultatif)">(facultatif)</span></label><input id="courtier">
+      <label for="limite"><span data-t="Date limite de la condition d'inspection">Date limite de la condition d'inspection</span> <span class="fac" data-t="(facultatif)">(facultatif)</span></label><input id="limite" type="date">
+      <label for="message"><span data-t="Message">Message</span> <span class="fac" data-t="(facultatif)">(facultatif)</span></label><textarea id="message" rows="3"></textarea>
+      <div class="cache" aria-hidden="true"><label for="site_web">Site web</label><input id="site_web" tabindex="-1" autocomplete="off"></div>
+      <label class="consent"><input type="checkbox" id="consent"> <span id="consent-txt"></span></label>
+      <div class="erreur" id="err" hidden></div>
+      <div style="margin-top:16px"><button class="btn" id="envoyer" type="submit" data-t="Réserver">Réserver</button></div>
+      <p class="muted" id="recap" style="text-align:center;margin:10px 0 0"></p>
+    </div>
+  </form>
+
+  <div class="carte fini" id="fini" hidden>
+    <div class="rond">✓</div>
+    <h2 style="justify-content:center;margin-top:14px" data-t="C'est réservé !">C'est réservé !</h2>
+    <p id="fini-txt"></p>
+    <p class="muted" data-t="Vous recevez une confirmation par courriel. Si l'heure doit changer, le lien dans ce courriel permet de la déplacer.">Vous recevez une confirmation par courriel. Si l'heure doit changer, le lien dans ce courriel permet de la déplacer.</p>
+  </div>
+</main>
+<script>
+(function(){
+ const API = 'https://script.google.com/macros/s/AKfycbwSj2ZHUj-0uZojCbJWfeuMCWP-m5tq-2kmzI7VDasiS8HcnjTKfR-pwMxdVXWA2AY/exec';
+ function b(s,f){return new Proxy({}, {get(_,k){
+  if(k==='withSuccessHandler')return h=>b(h,f); if(k==='withFailureHandler')return h=>b(s,h);
+  return (...args)=>fetch(API,{method:'POST',credentials:'omit',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:k,args})})
+   .then(r=>r.json()).then(j=>{ if(j.erreur){ f&&f(new Error(j.erreur)); } else { s&&s(j.resultat); } }).catch(e=>f&&f(e)); }});}
+ window.google={script:{run:b(null,null),url:{getLocation:cb=>cb({parameter:Object.fromEntries(new URLSearchParams(location.search))})}}};
+})();
+</script>
+<script>
+const MAPBOX = 'pk.eyJ1IjoiaW5zcGVjdGlvbmhhYiIsImEiOiJjbXc3NG42MDUwMGQ5MzBvNjE0YmhmeGdzIn0.SPdilwV2hmHME055636LcA';
+const EN = {
+  'La propriété': 'The property', 'Adresse de la propriété': 'Property address', 'Type de propriété': 'Type of property',
+  'Votre prix et vos dates': 'Your price and dates', 'Vos coordonnées': 'Your information', "Je suis l'acheteur": "I'm the buyer",
+  'Je suis le courtier': "I'm the broker", 'Nom complet': 'Full name', 'Courriel': 'Email', 'Téléphone': 'Phone',
+  'Nom de votre courtier': "Your broker's name", "Nom de l'acheteur": "Buyer's name", '(facultatif)': '(optional)',
+  "Date limite de la condition d'inspection": 'Inspection condition deadline', 'Message': 'Message', 'Réserver': 'Book',
+  "Vérifiez l'heure avec votre courtier avant de réserver : c'est lui qui s'entend avec le vendeur pour l'accès.": 'Check the time with your broker before booking: they arrange access with the seller.',
+  "C'est réservé !": "You're booked!", 'Réserver votre inspection': 'Book your inspection',
+  'Vous recevez une confirmation par courriel. Si l\'heure doit changer, le lien dans ce courriel permet de la déplacer.': 'You will receive a confirmation email. If the time needs to change, the link in that email lets you move it.',
+};
+const P = new URLSearchParams(location.search);
+let langue = P.get('lang') === 'en' ? 'en' : 'fr';
+const t = (s) => (langue === 'en' && EN[s]) || s;
+const $ = (s) => document.querySelector(s);
+const argent = (n) => langue === 'en' ? '$' + Number(n).toLocaleString('en-CA') : Number(n).toLocaleString('fr-CA') + ' $';
+const duree = (m) => m < 60 ? m + ' min' : Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + String(m % 60).padStart(2, '0') : '');
+const appeler = (fn, ...args) => new Promise((ok, ko) => google.script.run.withSuccessHandler(ok).withFailureHandler(ko)[fn](...args));
+let OFFRE = null, adresse = null, choix = null, calculs = 0;
+
+function traduire() {
+  document.documentElement.lang = langue;
+  document.querySelectorAll('[data-t]').forEach((e) => { e.textContent = t(e.dataset.t); });
+  $('#lg').textContent = langue === 'en' ? 'Français' : 'English';
+  document.title = t('Réserver votre inspection');
+  $('#adresse').placeholder = langue === 'en' ? 'e.g. 45 Laval Street, Gatineau' : 'ex. 45, rue Laval, Gatineau';
+  $('#consent-txt').innerHTML = langue === 'en'
+    ? 'I agree that my information is used to book and carry out my inspection. <a href="https://inspectionhab.ca/confidentialite" target="_blank" rel="noopener">Privacy policy</a>'
+    : 'J\'accepte que mes renseignements servent à réserver et à faire mon inspection. <a href="https://inspectionhab.ca/confidentialite" target="_blank" rel="noopener">Politique de confidentialité</a>';
+  roleChange();
+  if (OFFRE) { remplirTypes(); if (adresse) calculer(); }
+}
+function remplirTypes() {
+  const v = $('#ligne').value;
+  $('#ligne').innerHTML = '<option value="">' + (langue === 'en' ? 'Choose…' : 'Choisir…') + '</option>' + (OFFRE.grille || []).map((g) =>
+    '<option value="' + g.index + '">' + esc(langue === 'en' ? (g.type_en || g.type) : g.type) + ((langue === 'en' ? (g.superficie_en || g.superficie) : g.superficie) ? ' — ' + esc(langue === 'en' ? (g.superficie_en || g.superficie) : g.superficie) : '') + '</option>').join('');
+  $('#ligne').value = v;
+}
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function roleChange() {
+  const courtier = document.querySelector('[name=role]:checked').value === 'courtier';
+  $('#lbl-courtier').textContent = t(courtier ? "Nom de l'acheteur" : 'Nom de votre courtier');
+}
+function tel() { return (OFFRE && OFFRE.telephone) || '819 744-0563'; }
+function telLien(el) { el.href = 'tel:' + tel().replace(/[^\d+]/g, ''); el.textContent = (langue === 'en' ? 'Call us: ' : 'Appelez-nous : ') + tel(); }
+
+async function calculer() {
+  choix = null;
+  const ligne = $('#ligne').value;
+  if (!adresse || ligne === '') { $('#c-prix').hidden = true; $('#c-coord').hidden = true; return; }
+  const moi = ++calculs;
+  $('#c-prix').hidden = false; $('#prix').hidden = true; $('#demande').hidden = true; $('#bloc-plages').hidden = true; $('#c-coord').hidden = true;
+  $('#calcul').hidden = false;
+  $('#calcul').textContent = langue === 'en' ? 'Calculating your price and the available times…' : 'Calcul de votre prix et des heures libres…';
+  let r;
+  try { r = await appeler('resaPrix', adresse, ligne); } catch (e) { $('#calcul').textContent = (langue === 'en' ? 'Something went wrong. ' : 'Un problème est survenu. ') + (langue === 'en' ? 'Please call us: ' : 'Appelez-nous : ') + tel(); return; }
+  if (moi !== calculs) return;
+  $('#calcul').hidden = true;
+  if (r.ferme) { fermer(); return; }
+  if (r.prix != null) {
+    $('#prix').hidden = false;
+    $('#prix').innerHTML = '<div class="ligne"><span>' + (langue === 'en' ? 'Inspection' : 'Inspection') + '</span><span>' + argent(r.prix) + '</span></div>'
+      + (r.frais ? '<div class="ligne"><span>' + (langue === 'en' ? 'Travel fee' : 'Frais de déplacement') + ' <span class="muted">(' + duree(r.minutes) + (langue === 'en' ? ' drive' : ' de route') + ')</span></span><span>' + argent(r.frais) + '</span></div>' : '')
+      + '<div class="ligne total"><span>Total</span><span>' + argent(r.total) + '</span></div>'
+      + '<div class="muted" style="margin-top:4px">' + (langue === 'en' ? 'Taxes extra. No hidden fees.' : 'Taxes en sus. Aucuns frais cachés.') + '</div>';
+  }
+  if (!r.auto) {
+    const pourquoi = r.raisons.indexOf('route_sur_demande') >= 0 ? (langue === 'en' ? 'This property is far from our office: we confirm the date with you personally.' : 'Cette propriété est loin de notre bureau : nous confirmons la date avec vous personnellement.')
+      : r.raisons.indexOf('type_sur_demande') >= 0 ? (langue === 'en' ? 'For this type of property, the price depends on the building: let\'s talk.' : 'Pour ce type de propriété, le prix dépend du bâtiment : parlons-en.')
+      : r.raisons.indexOf('aucune_plage') >= 0 ? (langue === 'en' ? 'No time is open for online booking in the coming days.' : 'Aucune heure n\'est ouverte en ligne dans les prochains jours.')
+      : (langue === 'en' ? 'We could not find this address.' : 'Nous n\'avons pas trouvé cette adresse.');
+    $('#demande').hidden = false;
+    $('#demande').innerHTML = '<p style="margin:0 0 10px">' + pourquoi + '</p><a class="btn sec" id="d-tel" href="#"></a>';
+    telLien($('#d-tel'));
+    return;
+  }
+  $('#bloc-plages').hidden = false;
+  $('#plages').innerHTML = r.plages.map((p, i) => '<button type="button" class="plage" aria-pressed="false" data-i="' + i + '">' + esc(langue === 'en' ? p.texte_en : p.texte).replace(/^./, (c) => c.toUpperCase()) + '</button>').join('');
+  $('#plages').onclick = (e) => {
+    const b = e.target.closest('.plage'); if (!b) return;
+    document.querySelectorAll('.plage').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    choix = r.plages[Number(b.dataset.i)];
+    $('#c-coord').hidden = false;
+    $('#recap').textContent = (langue === 'en' ? choix.texte_en : choix.texte).replace(/^./, (c) => c.toUpperCase()) + ' · ' + argent(r.total) + (langue === 'en' ? ' + taxes' : ' + taxes');
+    $('#c-coord').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+}
+function fermer() {
+  $('#f').hidden = true; $('#ferme').hidden = false;
+  $('#ferme-txt').textContent = langue === 'en' ? 'Online booking is not available right now. Call us and we will find a time together.' : 'La réservation en ligne n\'est pas offerte en ce moment. Appelez-nous et on trouve une heure ensemble.';
+  telLien($('#ferme-tel'));
+}
+
+$('#f').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = $('#err'); err.hidden = true;
+  const d = { ligne: $('#ligne').value, adresse: adresse, jour: choix && choix.jour, heure: choix && choix.heure,
+    role: document.querySelector('[name=role]:checked').value, nom: $('#nom').value.trim(), courriel: $('#courriel').value.trim(),
+    telephone: $('#tel').value.trim(), courtier: $('#courtier').value.trim(), date_limite: $('#limite').value, message: $('#message').value.trim(),
+    consentement: $('#consent').checked, langue: langue, site_web: $('#site_web').value };
+  const manque = !choix ? (langue === 'en' ? 'Choose a time.' : 'Choisissez une heure.')
+    : !d.nom || !d.courriel || !d.telephone ? (langue === 'en' ? 'Name, email and phone are needed.' : 'Il faut votre nom, votre courriel et votre téléphone.')
+    : !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.courriel) ? (langue === 'en' ? 'This email looks incomplete.' : 'Ce courriel semble incomplet.')
+    : !d.consentement ? (langue === 'en' ? 'Please check the consent box.' : 'Cochez la case de consentement.') : '';
+  if (manque) { err.textContent = manque; err.hidden = false; return; }
+  const b = $('#envoyer'); b.disabled = true; b.textContent = langue === 'en' ? 'Booking…' : 'Réservation…';
+  try {
+    const r = await appeler('resaReserver', d);
+    if (r.ok) {
+      $('#f').hidden = true; $('#fini').hidden = false;
+      $('#fini-txt').textContent = (langue === 'en' ? (r.texte_en || '') : (r.texte || '')).replace(/^./, (c) => c.toUpperCase()) + (r.total ? ' · ' + argent(r.total) + ' + taxes' : '');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (r.raison === 'plage_prise') {
+      err.textContent = langue === 'en' ? 'Sorry, this time was just taken. Please choose another one.' : 'Désolé, cette heure vient d\'être prise. Choisissez-en une autre.';
+      err.hidden = false; await calculer(); err.hidden = false;
+    } else fermer();
+  } catch (x) {
+    err.textContent = String(x && x.message || '').indexOf('Trop') === 0 ? x.message : (langue === 'en' ? 'Something went wrong. Please call us: ' : 'Un problème est survenu. Appelez-nous : ') + tel();
+    err.hidden = false;
+  } finally { b.disabled = false; b.textContent = t('Réserver'); }
+});
+document.querySelectorAll('[name=role]').forEach((r) => { r.onchange = roleChange; });
+$('#ligne').onchange = calculer;
+$('#lg').onclick = () => { langue = langue === 'en' ? 'fr' : 'en'; traduire(); };
+$('#adresse').addEventListener('input', () => { if (adresse && $('#adresse').value.trim() !== adresse.texte) { adresse = null; calculer(); } });
+
+(async () => {
+  traduire();
+  try { OFFRE = await appeler('resaOffre'); } catch (e) { OFFRE = null; }
+  if (!OFFRE || !OFFRE.actif) { fermer(); return; }
+  if (OFFRE.entreprise) $('#ent').textContent = OFFRE.entreprise;
+  remplirTypes();
+  $('#f').hidden = false;
+  if (MAPBOX.indexOf('__') !== 0) {
+    suggestionsAdresse($('#adresse'), (q) => chercherMapbox(q, MAPBOX, langue), (a) => {
+      adresse = { texte: a.texte, adresse: a.adresse, ville: a.ville, cp: a.cp, lat: a.lat, lng: a.lng };
+      $('#adresse').value = a.texte; calculer();
+    });
+  }
+})();
+
+// Mapbox : jusqu'à 5 vraies adresses pendant qu'on tape, près de l'Outaouais d'abord (comme le portail du client).
+window.chercherMapbox = async function (q, jeton, lg) {
+  if (!jeton) return [];
+  const u = 'https://api.mapbox.com/geocoding/v5/mapbox.places/' + encodeURIComponent(q) + '.json?access_token=' + encodeURIComponent(jeton) +
+    '&country=ca&types=address&autocomplete=true&limit=5&proximity=-75.45,45.65&language=' + (lg === 'en' ? 'en' : 'fr');
+  const r = await fetch(u);
+  if (!r.ok) return [];
+  const d = await r.json();
+  return (d.features || []).map((f) => {
+    const c = (k) => ((f.context || []).find((x) => String(x.id || '').indexOf(k + '.') === 0) || {}).text || '';
+    return { texte: String(f.place_name || '').replace(/, Canada$/, ''), adresse: [f.address, f.text].filter(Boolean).join(' '),
+      ville: c('place') || c('locality'), cp: c('postcode'), lat: f.center && f.center[1], lng: f.center && f.center[0] };
+  });
+};
+window.suggestionsAdresse = function (champ, chercher, remplir) {
+  if (!champ || champ.dataset.sugg) return;
+  champ.dataset.sugg = '1';
+  let minut = null, boite = null, n = 0;
+  const fermerB = () => { if (boite) { boite.remove(); boite = null; } };
+  champ.addEventListener('input', () => {
+    clearTimeout(minut);
+    const q = champ.value.trim();
+    if (q.length < 6) { fermerB(); return; }
+    minut = setTimeout(async () => {
+      const moi = ++n;
+      let liste = [];
+      try { liste = (await chercher(q)) || []; } catch (e) { return; }
+      if (moi !== n || champ.value.trim() !== q || document.activeElement !== champ) return;
+      fermerB();
+      if (!liste.length) return;
+      boite = document.createElement('div');
+      boite.setAttribute('role', 'listbox');
+      boite.style.cssText = 'border:1px solid #c9d3dc;border-radius:10px;margin:4px 0 0;background:#fff;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.08)';
+      liste.forEach((a, i) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.textContent = '📍 ' + a.texte;
+        b.style.cssText = 'display:block;width:100%;text-align:left;padding:11px 12px;border:0;' + (i ? 'border-top:1px solid #eef1f4;' : '') + 'background:#fff;color:#1d2731;font:inherit;font-size:15px;cursor:pointer';
+        b.onmousedown = (e) => e.preventDefault();
+        b.onclick = () => { fermerB(); remplir(a); };
+        boite.appendChild(b);
+      });
+      champ.insertAdjacentElement('afterend', boite);
+    }, 450);
+  });
+  champ.addEventListener('blur', () => setTimeout(fermerB, 200));
+};
+</script>
+</body>
+</html>
