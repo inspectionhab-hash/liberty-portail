@@ -53,6 +53,13 @@
   <h1 id="titre" data-t="Réserver votre inspection">Réserver votre inspection</h1>
 </header>
 <main>
+  <div class="carte" id="gestion" hidden>
+    <h2 id="g-titre"></h2>
+    <div class="prix" id="g-resume"></div>
+    <div id="g-actions" style="margin-top:14px"></div>
+    <div class="plages" id="g-plages" hidden></div>
+    <div class="erreur" id="g-err" hidden></div>
+  </div>
   <div class="carte" id="ferme" hidden><p id="ferme-txt"></p><a class="btn sec" id="ferme-tel" href="#"></a></div>
 
   <form id="f" novalidate hidden>
@@ -242,8 +249,54 @@ $('#ligne').onchange = calculer;
 $('#lg').onclick = () => { langue = langue === 'en' ? 'fr' : 'en'; traduire(); };
 $('#adresse').addEventListener('input', () => { if (adresse && $('#adresse').value.trim() !== adresse.texte) { adresse = null; calculer(); } });
 
+// 26 nov. 2026 (étape 3) : le lien « changer ou annuler » de la confirmation (?r=…&k=…)
+async function gerer(r, k) {
+  const g = $('#gestion'), err = $('#g-err');
+  const montrer = (m) => { err.textContent = m; err.hidden = false; };
+  let R;
+  try { R = await appeler('resaLire', r, k); } catch (e) { g.hidden = false; $('#g-titre').textContent = langue === 'en' ? 'This link is not valid.' : "Ce lien n'est pas valide."; return; }
+  if (R.langue && !P.get('lang')) { langue = R.langue; traduire(); }
+  g.hidden = false;
+  $('#titre').textContent = langue === 'en' ? 'Your inspection' : 'Votre inspection';
+  const quand = ((langue === 'en' ? R.texte_en : R.texte) || '').replace(/^./, (c) => c.toUpperCase());
+  $('#g-titre').textContent = R.annulee ? (langue === 'en' ? 'This booking is cancelled' : 'Cette réservation est annulée') : (langue === 'en' ? 'Your booking' : 'Votre réservation');
+  $('#g-resume').innerHTML = '<div><b>' + esc(quand) + '</b></div><div>' + esc(R.adresse || '') + '</div>' + (R.total != null ? '<div class="muted">' + argent(R.total) + (langue === 'en' ? ' before taxes' : ' avant taxes') + '</div>' : '');
+  const telBtn = '<a class="btn sec" href="tel:' + String(R.telephone || '').replace(/[^\d+]/g, '') + '">' + (langue === 'en' ? 'Call us: ' : 'Appelez-nous : ') + esc(R.telephone || '') + '</a>';
+  if (R.annulee) { $('#g-actions').innerHTML = '<a class="btn" href="reserver.html' + (langue === 'en' ? '?lang=en' : '') + '">' + (langue === 'en' ? 'Book again' : 'Réserver de nouveau') + '</a>'; return; }
+  if (!R.modifiable) {
+    $('#g-actions').innerHTML = '<p>' + (langue === 'en' ? 'Your inspection is less than ' + R.heures_annulation + ' hours away: to change it, please call us.' : "Votre inspection est dans moins de " + R.heures_annulation + " h : pour la changer, appelez-nous.") + '</p>' + telBtn;
+    return;
+  }
+  $('#g-actions').innerHTML = '<div class="pile" style="display:grid;gap:8px"><button class="btn" id="g-changer" type="button">' + (langue === 'en' ? 'Change the time' : "Changer l'heure") + '</button>'
+    + '<button class="btn sec" id="g-annuler" type="button">' + (langue === 'en' ? 'Cancel my booking' : 'Annuler ma réservation') + '</button></div>';
+  $('#g-changer').onclick = () => {
+    const pl = $('#g-plages'); pl.hidden = false;
+    pl.innerHTML = (R.plages || []).length ? R.plages.map((x, i) => '<button type="button" class="plage" data-i="' + i + '">' + esc(((langue === 'en' ? x.texte_en : x.texte) || '').replace(/^./, (c) => c.toUpperCase())) + '</button>').join('')
+      : '<p class="muted">' + (langue === 'en' ? 'No other time is open online. Please call us.' : "Aucune autre heure n'est ouverte en ligne. Appelez-nous.") + '</p>';
+    pl.onclick = async (e) => {
+      const b = e.target.closest('.plage'); if (!b) return;
+      const x = R.plages[Number(b.dataset.i)];
+      if (!confirm((langue === 'en' ? 'Move your inspection to ' + x.texte_en + '?' : 'Déplacer votre inspection au ' + x.texte + ' ?'))) return;
+      try {
+        const res = await appeler('resaDeplacer', r, k, x.jour, x.heure);
+        if (res.ok) { pl.hidden = true; return gerer(r, k); }
+        montrer(res.raison === 'plage_prise' ? (langue === 'en' ? 'This time was just taken. Choose another one.' : "Cette heure vient d'être prise. Choisissez-en une autre.") : (langue === 'en' ? 'Please call us.' : 'Appelez-nous.'));
+      } catch (x2) { montrer(langue === 'en' ? 'Something went wrong. Please call us.' : 'Un problème est survenu. Appelez-nous.'); }
+    };
+  };
+  $('#g-annuler').onclick = async () => {
+    if (!confirm(langue === 'en' ? 'Cancel your inspection?' : 'Annuler votre inspection ?')) return;
+    try {
+      const res = await appeler('resaAnnuler', r, k);
+      if (res.ok) return gerer(r, k);
+      montrer(langue === 'en' ? 'It is too late to cancel online. Please call us.' : "C'est trop tard pour annuler en ligne. Appelez-nous.");
+    } catch (x2) { montrer(langue === 'en' ? 'Something went wrong. Please call us.' : 'Un problème est survenu. Appelez-nous.'); }
+  };
+}
+
 (async () => {
   traduire();
+  if (P.get('r') && P.get('k')) { await gerer(P.get('r'), P.get('k')); return; }
   try { OFFRE = await appeler('resaOffre'); } catch (e) { OFFRE = null; }
   if (!OFFRE || !OFFRE.actif) { fermer(); return; }
   if (OFFRE.entreprise) $('#ent').textContent = OFFRE.entreprise;
