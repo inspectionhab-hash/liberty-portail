@@ -245,6 +245,18 @@ $('#f').addEventListener('submit', async (e) => {
   } finally { b.disabled = false; b.textContent = t('Réserver'); }
 });
 document.querySelectorAll('[name=role]').forEach((r) => { r.onchange = roleChange; });
+// Téléphone mis en forme pendant qu'on tape : (819) 744-0563 (même règle que la page Réserver du site)
+function telForme(v) {
+  let d = String(v || '').replace(/\D/g, '');
+  if (d.length > 10 && d[0] === '1') d = d.slice(1);
+  d = d.slice(0, 10);
+  if (!d) return '';
+  if (d.length < 4) return '(' + d;
+  if (d.length < 7) return '(' + d.slice(0, 3) + ') ' + d.slice(3);
+  return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6);
+}
+$('#tel').addEventListener('input', (e) => { if (!String(e.inputType || '').startsWith('delete')) $('#tel').value = telForme($('#tel').value); });
+$('#tel').addEventListener('blur', () => { $('#tel').value = telForme($('#tel').value); });
 $('#ligne').onchange = calculer;
 $('#lg').onclick = () => { langue = langue === 'en' ? 'fr' : 'en'; traduire(); };
 $('#adresse').addEventListener('input', () => { if (adresse && $('#adresse').value.trim() !== adresse.texte) { adresse = null; calculer(); } });
